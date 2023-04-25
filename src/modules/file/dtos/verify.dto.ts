@@ -15,9 +15,4 @@ export class VerifyDto {
   @IsInt({ message: 'size类型错误' })
   @IsNotEmpty({ message: 'size不能为空' })
   readonly size: number;
-
-  @Min(1, { message: 'chunkCount错误' })
-  @IsInt({ message: 'chunkCount类型错误' })
-  @IsNotEmpty({ message: 'chunkCount不能为空' })
-  readonly chunkCount: number;
 }

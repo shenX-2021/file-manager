@@ -6,6 +6,7 @@ const port = 8888;
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  app.setGlobalPrefix('/fm');
   // 全局使用管道(数据校验)
   app.useGlobalPipes(
     new ValidationPipe({

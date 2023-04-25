@@ -2,18 +2,19 @@ import { Injectable } from '@nestjs/common';
 import { UploadChunkDto, VerifyDto } from '../dtos';
 import * as fse from 'fs-extra';
 import * as path from 'path';
+import { VerifyRo } from '../ros';
 
 @Injectable()
 export class FileService {
-  static UPLOAD_DIR = path.join(__dirname, '../../../../', 'target');
-  static CHUNK_DIR = path.join(__dirname, '../../../../', 'chunk');
+  static UPLOAD_DIR = path.join(__dirname, '../../../../target', 'files');
+  static CHUNK_DIR = path.join(__dirname, '../../../../target', 'chunks');
   static CHUNK_MAX_SIZE = 30 * 1024 * 1024;
 
   /**
    * 验证是否已经上传
    */
-  async verify(verifyDto: VerifyDto) {
-    const { filename, fileHash, size, chunkCount } = verifyDto;
+  async verify(verifyDto: VerifyDto): Promise<VerifyRo> {
+    const { filename, fileHash, size } = verifyDto;
     const filePath = this.getFilePath(fileHash, filename);
     console.log('filePath', filePath);
 
@@ -34,6 +35,7 @@ export class FileService {
     } catch (e) {
       // do nothing
     }
+    const chunkCount = Math.ceil(size / FileService.CHUNK_MAX_SIZE);
 
     // 检查目录下所有切片
     const chunkDir = this.getChunkDir(fileHash);
@@ -69,7 +71,7 @@ export class FileService {
    * 上传文件切片
    */
   async uploadChunk(uploadChunkDto: UploadChunkDto, file: Express.Multer.File) {
-    const { fileHash, filename, chunkIndex, chunkCount } = uploadChunkDto;
+    const { fileHash, filename, chunkIndex, size } = uploadChunkDto;
 
     const filePath = this.getFilePath(fileHash, filename);
     const chunkDir = this.getChunkDir(fileHash);
@@ -87,6 +89,7 @@ export class FileService {
     try {
       const chunkStat = await fse.stat(chunkPath);
 
+      const chunkCount = Math.ceil(size / FileService.CHUNK_MAX_SIZE);
       if (
         chunkIndex === chunkCount - 1 ||
         chunkStat.size === FileService.CHUNK_MAX_SIZE
