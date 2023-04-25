@@ -6,7 +6,7 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { FileService } from '../service/file.service';
-import { UploadChunkDto, VerifyDto } from '../dtos';
+import { MergeChunkDto, UploadChunkDto, VerifyDto } from '../dtos';
 import { FileInterceptor } from '@nestjs/platform-express';
 
 @Controller('file')
@@ -31,5 +31,13 @@ export class FileController {
     @UploadedFile() file: Express.Multer.File,
   ) {
     return this.fileService.uploadChunk(uploadChunkDto, file);
+  }
+
+  /**
+   * 合并文件切片
+   */
+  @Post('merge')
+  mergeChunk(@Body() mergeChunkDto: MergeChunkDto) {
+    return this.fileService.mergeChunk(mergeChunkDto);
   }
 }

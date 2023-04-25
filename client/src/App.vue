@@ -50,8 +50,9 @@
 
 <script setup lang="ts">
 import { computed, reactive, watch } from 'vue';
-import { verifyFileApi } from '/src/http/apis';
-import { hashList } from '/src/utils';
+import { mergeChunkApi, verifyFileApi } from '@src/http/apis';
+import { hashList } from '@src/utils';
+import { ElMessage } from 'element-plus/es';
 
 // 切片大小
 const SIZE = 30 * 1024 * 1024;
@@ -126,7 +127,7 @@ function transformByte(val: number) {
 const uploadDisabled = computed(
   () =>
     !state.container.file ||
-    [Status.pause, Status.uploading].includes(state.status),
+    ([Status.pause, Status.uploading] as Status[]).includes(state.status),
 );
 // 上传进度条
 const uploadPercentage = computed(() => {
@@ -211,18 +212,19 @@ async function verifyFile(): Promise<string[] | undefined> {
 // 请求处理
 function request({
   url,
-  method = 'post',
+  method,
   data,
   headers = {},
-  onProgress = (e) => e,
+  onProgress,
   requestList,
 }: RequestOpts): any {
   return new Promise((resolve) => {
+    method = method || 'post';
     const xhr = new XMLHttpRequest();
-    xhr.upload.onprogress = onProgress;
+    xhr.upload.onprogress = onProgress || null;
     xhr.open(method, url);
-    Object.keys(headers).forEach((key) =>
-      xhr.setRequestHeader(key, headers[key]),
+    Object.values(headers).forEach(([key, value]) =>
+      xhr.setRequestHeader(key, value),
     );
     xhr.send(data);
     xhr.onload = (e: any) => {
@@ -297,8 +299,12 @@ function calculateBlobHash(blob: Blob): Promise<string> {
     reader.readAsArrayBuffer(blob);
 
     reader.onload = (e: ProgressEvent<FileReader>) => {
-      spark.append(e.target?.result);
-      resolve(spark.end());
+      if (e.target?.result) {
+        spark.append(e.target.result);
+        resolve(spark.end());
+      } else {
+        throw new Error('切片数据不存在');
+      }
     };
   });
 }
@@ -339,7 +345,7 @@ async function uploadChunks(uploadedList: string[] = []) {
   const file = state.container.file;
   const fileHash = state.container.hash;
   const requestList = state.data
-    .filter(({ hash }) => !uploadedList.includes(hash))
+    .filter(({ index }) => !uploadedList.includes(index.toString()))
     .map(({ chunk, index }) => {
       const formData = new FormData();
       formData.append('chunk', chunk);
@@ -358,33 +364,12 @@ async function uploadChunks(uploadedList: string[] = []) {
       }),
     );
   await Promise.all(requestList);
-  // 之前上传的切片数量 + 本次上传的切片数量 = 所有切片数量时合并切片
-  // merge chunks when the number of chunks uploaded before and
-  // the number of chunks uploaded this time
-  // are equal to the number of all chunks
-  if (uploadedList.length + requestList.length === state.data.length) {
-    await mergeRequest();
-  }
-}
-// 合并切片请求
-async function mergeRequest() {
-  if (!state.container.file) return;
-  await request({
-    url: 'http://192.168.0.19:3000/merge',
-    headers: {
-      'content-type': 'application/json',
-    },
-    data: JSON.stringify({
-      size: SIZE,
-      fileHash: state.container.hash,
-      filename: state.container.file.name,
-    }),
+
+  // 合并切片请求
+  mergeChunkApi({
+    fileHash: state.container.hash,
+    size: state.container.file.size,
   });
-  ElMessage({
-    message: '合并切片成功',
-    type: 'success',
-  });
-  state.status = Status.wait;
 }
 // 用闭包保存每个 chunk 的进度数据
 function createProgressHandler(item) {

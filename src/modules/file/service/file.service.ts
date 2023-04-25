@@ -1,8 +1,13 @@
-import { Injectable } from '@nestjs/common';
-import { UploadChunkDto, VerifyDto } from '../dtos';
+import {
+  BadRequestException,
+  Injectable,
+  InternalServerErrorException,
+} from '@nestjs/common';
+import { MergeChunkDto, UploadChunkDto, VerifyDto } from '../dtos';
 import * as fse from 'fs-extra';
 import * as path from 'path';
 import { VerifyRo } from '../ros';
+import * as pLimit from 'p-limit';
 
 @Injectable()
 export class FileService {
@@ -15,8 +20,7 @@ export class FileService {
    */
   async verify(verifyDto: VerifyDto): Promise<VerifyRo> {
     const { filename, fileHash, size } = verifyDto;
-    const filePath = this.getFilePath(fileHash, filename);
-    console.log('filePath', filePath);
+    const filePath = this.getFilePath(fileHash);
 
     await fse.ensureDir(FileService.UPLOAD_DIR);
 
@@ -73,7 +77,7 @@ export class FileService {
   async uploadChunk(uploadChunkDto: UploadChunkDto, file: Express.Multer.File) {
     const { fileHash, filename, chunkIndex, size } = uploadChunkDto;
 
-    const filePath = this.getFilePath(fileHash, filename);
+    const filePath = this.getFilePath(fileHash);
     const chunkDir = this.getChunkDir(fileHash);
 
     await fse.ensureDir(chunkDir);
@@ -115,6 +119,62 @@ export class FileService {
   }
 
   /**
+   * 合并文件切片
+   */
+  async mergeChunk(mergeChunkDto: MergeChunkDto) {
+    const { fileHash, size } = mergeChunkDto;
+
+    const chunkDir = this.getChunkDir(fileHash);
+    const filePath = this.getFilePath(fileHash);
+
+    try {
+      const fileStat = await fse.stat(filePath);
+      if (fileStat.size === size) {
+        // TODO: 文件已合并
+      } else if (fileStat.size > size) {
+        // 文件大于预期大小，删除文件
+        await fse.rm(filePath);
+      }
+    } catch (e) {
+      // do nothing
+    }
+    const limit = pLimit(12);
+    await fse.access(chunkDir).catch(() => {
+      throw new BadRequestException('不存在该文件的切片');
+    });
+    const chunkList = await fse.readdir(chunkDir);
+    const promises = chunkList.map((chunkName) => {
+      return limit(() => {
+        return new Promise(async (resolve) => {
+          const chunk = await fse.readFile(path.join(chunkDir, chunkName));
+          const index = parseInt(chunkName);
+          const writeStream = fse.createWriteStream(filePath, {
+            start: index * FileService.CHUNK_MAX_SIZE,
+            flags: 'a',
+          });
+          writeStream.on('close', () => {
+            resolve(index);
+          });
+          writeStream.end(chunk);
+        });
+      });
+    });
+
+    await Promise.all(promises);
+
+    try {
+      const fileStat = await fse.stat(filePath);
+      if (fileStat.size !== size) {
+        throw new BadRequestException('合并后的文件大小不符合预期');
+      }
+    } catch (e) {
+      throw new InternalServerErrorException('合并后的文件丢失');
+    }
+    // 移除切片
+    await fse.remove(chunkDir);
+  }
+
+  /**
    * 获取文件的chunk块的目录
    */
   private getChunkDir(fileHash: string): string {
@@ -124,8 +184,7 @@ export class FileService {
   /**
    * 获取文件路径
    */
-  private getFilePath(fileHash: string, filename: string): string {
-    const extname = path.extname(filename);
-    return path.join(FileService.UPLOAD_DIR, `${fileHash}${extname}`);
+  private getFilePath(fileHash: string): string {
+    return path.join(FileService.UPLOAD_DIR, fileHash);
   }
 }
