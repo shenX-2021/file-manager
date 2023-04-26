@@ -3,17 +3,33 @@ import {
   Injectable,
   InternalServerErrorException,
 } from '@nestjs/common';
-import { MergeChunkDto, UploadChunkDto, VerifyDto } from '../dtos';
+import {
+  ChangeFilenameDto,
+  MergeChunkDto,
+  UploadChunkDto,
+  VerifyDto,
+} from '../dtos';
 import * as fse from 'fs-extra';
 import * as path from 'path';
 import { VerifyRo } from '../ros';
 import * as pLimit from 'p-limit';
+import { InjectRepository } from '@nestjs/typeorm';
+import { FileEntity, UserEntity } from '../../../entities';
+import { Repository } from 'typeorm';
+import { FileStatusEnum } from '../../../enums';
 
 @Injectable()
 export class FileService {
   static UPLOAD_DIR = path.join(__dirname, '../../../../target', 'files');
   static CHUNK_DIR = path.join(__dirname, '../../../../target', 'chunks');
   static CHUNK_MAX_SIZE = 30 * 1024 * 1024;
+
+  constructor(
+    @InjectRepository(UserEntity)
+    private readonly userEntityRepository: Repository<UserEntity>,
+    @InjectRepository(FileEntity)
+    private readonly fileEntityRepository: Repository<FileEntity>,
+  ) {}
 
   /**
    * 验证是否已经上传
@@ -24,13 +40,51 @@ export class FileService {
 
     await fse.ensureDir(FileService.UPLOAD_DIR);
 
+    let fileEntity = await this.fileEntityRepository.findOneBy({ fileHash });
+    if (!fileEntity) {
+      fileEntity = await this.fileEntityRepository
+        .create({
+          filename,
+          fileHash,
+          filePath,
+          status: FileStatusEnum.INIT,
+        })
+        .save();
+    }
+
+    // 文件名不同，需要用户判断是否更改名字
+    if (fileEntity.filename !== filename) {
+      return {
+        code: 1,
+        message: '文件名不同，是否要修改',
+        data: {
+          id: fileEntity.id,
+          originFileName: fileEntity.filename,
+        },
+      };
+    }
+    if (fileEntity.status === FileStatusEnum.FINISHED) {
+      return {
+        code: 0,
+        data: {
+          needUpload: false,
+        },
+      };
+    }
+
     try {
       const fileStat = await fse.stat(filePath);
 
       if (fileStat.size === size) {
+        fileEntity.status = FileStatusEnum.FINISHED;
+        await fileEntity.save();
+
         // 大小相同，则认为是文件一致，无需重复上传
         return {
-          needUpload: false,
+          code: 0,
+          data: {
+            needUpload: false,
+          },
         };
       } else {
         // 大小不同，移除已上传的文件
@@ -39,6 +93,7 @@ export class FileService {
     } catch (e) {
       // do nothing
     }
+    // 通过文件大小计算切片数量
     const chunkCount = Math.ceil(size / FileService.CHUNK_MAX_SIZE);
 
     // 检查目录下所有切片
@@ -65,9 +120,17 @@ export class FileService {
       uploadedList = await fse.readdir(chunkDir);
     }
 
+    if (fileEntity.status === FileStatusEnum.INIT) {
+      fileEntity.status = FileStatusEnum.CHUNK_UPLOADED;
+      await fileEntity.save();
+    }
+
     return {
-      needUpload: true,
-      uploadedList,
+      code: 0,
+      data: {
+        needUpload: true,
+        uploadedList,
+      },
     };
   }
 
@@ -75,7 +138,7 @@ export class FileService {
    * 上传文件切片
    */
   async uploadChunk(uploadChunkDto: UploadChunkDto, file: Express.Multer.File) {
-    const { fileHash, filename, chunkIndex, size } = uploadChunkDto;
+    const { fileHash, chunkIndex, size } = uploadChunkDto;
 
     const filePath = this.getFilePath(fileHash);
     const chunkDir = this.getChunkDir(fileHash);
@@ -121,17 +184,33 @@ export class FileService {
   /**
    * 合并文件切片
    */
-  async mergeChunk(mergeChunkDto: MergeChunkDto) {
+  async mergeChunk(mergeChunkDto: MergeChunkDto): Promise<void> {
     const { fileHash, size } = mergeChunkDto;
 
+    const fileEntity = await this.fileEntityRepository.findOneBy({ fileHash });
+    if (!fileEntity) {
+      throw new BadRequestException('文件记录不存在，无法合并切片');
+    }
+    if (fileEntity.status !== FileStatusEnum.CHUNK_UPLOADED) {
+      throw new BadRequestException('文件记录的状态不正确');
+    }
+
+    if (!fileEntity.filePath) {
+      fileEntity.filePath = this.getFilePath(fileHash);
+    }
+
+    const filePath = fileEntity.filePath;
     const chunkDir = this.getChunkDir(fileHash);
-    const filePath = this.getFilePath(fileHash);
 
     try {
       const fileStat = await fse.stat(filePath);
+      // 文件大小相同，则认为检验成功，无需重复合并
       if (fileStat.size === size) {
-        // TODO: 文件已合并
-      } else if (fileStat.size > size) {
+        fileEntity.status = FileStatusEnum.FINISHED;
+        await fileEntity.save();
+        return;
+      }
+      if (fileStat.size > size) {
         // 文件大于预期大小，删除文件
         await fse.rm(filePath);
       }
@@ -146,6 +225,7 @@ export class FileService {
     const promises = chunkList.map((chunkName) => {
       return limit(() => {
         return new Promise(async (resolve) => {
+          // 直接读取文件到内存，会比stream流更快，但更占内存
           const chunk = await fse.readFile(path.join(chunkDir, chunkName));
           const index = parseInt(chunkName);
           const writeStream = fse.createWriteStream(filePath, {
@@ -172,6 +252,26 @@ export class FileService {
     }
     // 移除切片
     await fse.remove(chunkDir);
+
+    fileEntity.status = FileStatusEnum.FINISHED;
+    await fileEntity.save();
+  }
+
+  /**
+   * 修改文件名
+   */
+  async changeFileName(
+    id: number,
+    changeFilenameDto: ChangeFilenameDto,
+  ): Promise<void> {
+    const { filename } = changeFilenameDto;
+    const fileEntity = await this.fileEntityRepository.findOneBy({ id });
+    if (!fileEntity) {
+      throw new BadRequestException('文件不存在，修改文件失败');
+    }
+
+    fileEntity.filename = filename;
+    await fileEntity.save();
   }
 
   /**

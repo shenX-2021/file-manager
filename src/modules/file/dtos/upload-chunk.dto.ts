@@ -7,11 +7,6 @@ export class UploadChunkDto {
   @IsNotEmpty({ message: 'fileHash不能为空' })
   readonly fileHash: string;
 
-  @Length(4, 64, { message: 'filename错误' })
-  @IsString({ message: 'filename类型错误' })
-  @IsNotEmpty({ message: 'filename不能为空' })
-  readonly filename: string;
-
   @Min(1, { message: 'size错误' })
   @IsInt({ message: 'size类型错误' })
   @Type(() => Number)

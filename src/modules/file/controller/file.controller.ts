@@ -1,12 +1,20 @@
 import {
   Body,
   Controller,
+  Param,
+  ParseIntPipe,
+  Patch,
   Post,
   UploadedFile,
   UseInterceptors,
 } from '@nestjs/common';
 import { FileService } from '../service/file.service';
-import { MergeChunkDto, UploadChunkDto, VerifyDto } from '../dtos';
+import {
+  ChangeFilenameDto,
+  MergeChunkDto,
+  UploadChunkDto,
+  VerifyDto,
+} from '../dtos';
 import { FileInterceptor } from '@nestjs/platform-express';
 
 @Controller('file')
@@ -39,5 +47,16 @@ export class FileController {
   @Post('merge')
   mergeChunk(@Body() mergeChunkDto: MergeChunkDto) {
     return this.fileService.mergeChunk(mergeChunkDto);
+  }
+
+  /**
+   * 修改文件名
+   */
+  @Patch('filename/:id')
+  changeFileName(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() changeFilenameDto: ChangeFilenameDto,
+  ) {
+    return this.fileService.changeFileName(id, changeFilenameDto);
   }
 }

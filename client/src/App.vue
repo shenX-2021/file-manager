@@ -49,10 +49,14 @@
 </template>
 
 <script setup lang="ts">
-import { computed, reactive, watch } from 'vue';
-import { mergeChunkApi, verifyFileApi } from '@src/http/apis';
+import { computed, reactive, ref, watch } from 'vue';
+import {
+  changeFilenameApi,
+  mergeChunkApi,
+  verifyFileApi,
+} from '@src/http/apis';
 import { hashList } from '@src/utils';
-import { ElMessage } from 'element-plus/es';
+import { ElMessage, ElMessageBox } from 'element-plus/es';
 
 // 切片大小
 const SIZE = 30 * 1024 * 1024;
@@ -181,33 +185,73 @@ async function handleResume() {
     await uploadChunks(uploadedList);
   }
 }
+// 验证文件信息
 async function verifyFile(): Promise<string[] | undefined> {
   if (!state.container.file || !state.container.hash) return;
+  let filename = state.container.file.name;
 
-  const { needUpload, uploadedList } = await verifyFileApi({
-    filename: state.container.file.name,
+  let res = await verifyFileApi({
+    filename: filename,
     fileHash: state.container.hash,
     size: state.container.file.size,
   });
-  if (!needUpload) {
-    ElMessage({
-      message: '该文件已上传，无需重复上传',
-      type: 'success',
+  if (res.code === 1) {
+    const { originFileName, id } = res.data;
+    await ElMessageBox.confirm(
+      `文件名【${filename}】与服务器存档的文件名【${originFileName}】不符，是否需要修改名字`,
+    )
+      .then(async () => {
+        await changeFilenameApi(id, { filename });
+      })
+      .catch((e) => {
+        if (e !== 'cancel') {
+          throw e;
+        }
+        filename = originFileName;
+      });
+
+    res = await verifyFileApi({
+      filename,
+      fileHash: state.container.hash,
+      size: state.container.file.size,
     });
-    state.status = Status.wait;
-    return;
+
+    if (res.code === 1) {
+      ElMessage({
+        message: '修改文件名失败，页面即将刷新',
+        type: 'error',
+        duration: 3500,
+        onClose: () => {
+          location.reload();
+        },
+      });
+    }
   }
+  if (res.code === 0) {
+    const { needUpload } = res.data;
 
-  // 计算每个切片的上传进度
-  const map: Record<string, 100> = {};
-  uploadedList?.forEach((chunkName) => {
-    map[chunkName] = 100;
-  });
-  state.data.forEach((item) => {
-    item.percentage = map[item.index] || 0;
-  });
+    if (!needUpload) {
+      ElMessage({
+        message: '该文件已上传，无需重复上传',
+        type: 'success',
+      });
+      state.status = Status.wait;
+      initState();
+      return;
+    }
+    const { uploadedList } = res.data;
 
-  return uploadedList;
+    // 计算每个切片的上传进度
+    const map: Record<string, 100> = {};
+    uploadedList?.forEach((chunkName) => {
+      map[chunkName] = 100;
+    });
+    state.data.forEach((item) => {
+      item.percentage = map[item.index] || 0;
+    });
+
+    return uploadedList;
+  }
 }
 // 请求处理
 function request({
@@ -366,10 +410,13 @@ async function uploadChunks(uploadedList: string[] = []) {
   await Promise.all(requestList);
 
   // 合并切片请求
-  mergeChunkApi({
+  await mergeChunkApi({
     fileHash: state.container.hash,
     size: state.container.file.size,
   });
+
+  ElMessage({ message: '上传文件成功', type: 'success' });
+  initState();
 }
 // 用闭包保存每个 chunk 的进度数据
 function createProgressHandler(item) {
@@ -378,3 +425,9 @@ function createProgressHandler(item) {
   };
 }
 </script>
+
+<style lang="scss">
+.app {
+  color: blue;
+}
+</style>
