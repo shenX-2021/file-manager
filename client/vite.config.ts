@@ -7,6 +7,7 @@ import * as path from 'path';
 
 // https://vitejs.dev/config/
 export default defineConfig({
+  base: '/fm/web',
   plugins: [
     vue(),
     AutoImport({
@@ -19,7 +20,7 @@ export default defineConfig({
   server: {
     port: 8889,
     proxy: {
-      '/fm': {
+      '/fm/api': {
         target: 'http://localhost:8888',
         changeOrigin: true,
         rewrite: (path: string) => path.replace(/^\/fm/, 'fm'),

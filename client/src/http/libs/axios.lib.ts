@@ -2,7 +2,7 @@ import AxiosStatic from 'axios';
 import { ElMessage } from 'element-plus/es';
 
 export const axios = AxiosStatic.create({
-  baseURL: '/',
+  baseURL: '/fm/api',
   timeout: 10000,
 });
 

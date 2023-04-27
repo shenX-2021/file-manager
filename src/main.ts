@@ -13,7 +13,7 @@ async function bootstrap() {
   await fse.ensureDir(UPLOAD_FILE_DIR);
   await fse.ensureDir(UPLOAD_CHUNK_DIR);
   const app = await NestFactory.create(AppModule);
-  app.setGlobalPrefix('/fm');
+  app.setGlobalPrefix('/fm/api');
   // 全局使用管道(数据校验)
   app.useGlobalPipes(
     new ValidationPipe({
