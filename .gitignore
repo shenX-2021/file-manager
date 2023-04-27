@@ -35,3 +35,6 @@ lerna-debug.log*
 !.vscode/extensions.json
 
 target/
+
+ecosystem-debug.config.js
+.env

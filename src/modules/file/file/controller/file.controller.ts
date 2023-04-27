@@ -1,20 +1,12 @@
 import {
   Body,
   Controller,
-  Param,
-  ParseIntPipe,
-  Patch,
   Post,
   UploadedFile,
   UseInterceptors,
 } from '@nestjs/common';
 import { FileService } from '../service/file.service';
-import {
-  ChangeFilenameDto,
-  MergeChunkDto,
-  UploadChunkDto,
-  VerifyDto,
-} from '../dtos';
+import { MergeChunkDto, UploadChunkDto, VerifyDto } from '../dtos';
 import { FileInterceptor } from '@nestjs/platform-express';
 
 @Controller('file')

@@ -12,11 +12,10 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { FileEntity } from '../../../../entities';
 import { Repository } from 'typeorm';
 import { FileCheckStatusEnum, FileStatusEnum } from '../../../../enums';
+import { UPLOAD_CHUNK_DIR, UPLOAD_FILE_DIR } from '../../../../config';
 
 @Injectable()
 export class FileService {
-  static UPLOAD_DIR = path.join(__dirname, '../../../../target', 'files');
-  static CHUNK_DIR = path.join(__dirname, '../../../../target', 'chunks');
   static CHUNK_MAX_SIZE = 30 * 1024 * 1024;
 
   constructor(
@@ -168,8 +167,6 @@ export class FileService {
       // do nothing
     }
 
-    await fse.ensureDir(chunkDir);
-
     await fse.writeFile(chunkPath, file.buffer);
     return {
       status: 1,
@@ -256,13 +253,13 @@ export class FileService {
    * 获取文件的chunk块的目录
    */
   private getChunkDir(fileHash: string): string {
-    return path.join(FileService.CHUNK_DIR, fileHash);
+    return path.join(UPLOAD_CHUNK_DIR, fileHash);
   }
 
   /**
    * 获取文件路径
    */
   private getFilePath(fileHash: string): string {
-    return path.join(FileService.UPLOAD_DIR, fileHash);
+    return path.join(UPLOAD_FILE_DIR, fileHash);
   }
 }
