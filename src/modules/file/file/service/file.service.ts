@@ -14,9 +14,9 @@ import * as path from 'path';
 import { VerifyRo } from '../ros';
 import * as pLimit from 'p-limit';
 import { InjectRepository } from '@nestjs/typeorm';
-import { FileEntity, UserEntity } from '../../../entities';
+import { FileEntity, UserEntity } from '../../../../entities';
 import { Repository } from 'typeorm';
-import { FileStatusEnum } from '../../../enums';
+import { FileCheckStatusEnum, FileStatusEnum } from '../../../../enums';
 
 @Injectable()
 export class FileService {
@@ -35,10 +35,8 @@ export class FileService {
    * 验证是否已经上传
    */
   async verify(verifyDto: VerifyDto): Promise<VerifyRo> {
-    const { filename, fileHash, size } = verifyDto;
+    const { filename, fileHash, size, startHash, endHash } = verifyDto;
     const filePath = this.getFilePath(fileHash);
-
-    await fse.ensureDir(FileService.UPLOAD_DIR);
 
     let fileEntity = await this.fileEntityRepository.findOneBy({ fileHash });
     if (!fileEntity) {
@@ -46,8 +44,12 @@ export class FileService {
         .create({
           filename,
           fileHash,
+          startHash,
+          endHash,
           filePath,
+          size,
           status: FileStatusEnum.INIT,
+          checkStatus: FileCheckStatusEnum.UNCHECKED,
         })
         .save();
     }

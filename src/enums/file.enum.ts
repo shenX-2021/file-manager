@@ -13,3 +13,19 @@ export enum FileStatusEnum {
    */
   FINISHED = 2,
 }
+
+// 文件校验状态
+export enum FileCheckStatusEnum {
+  /**
+   * 未校验
+   */
+  UNCHECKED = 0,
+  /**
+   * 校验成功
+   */
+  SUCCESSFUL = 1,
+  /**
+   * 校验失败
+   */
+  FAILURE = 2,
+}
