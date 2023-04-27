@@ -48,15 +48,4 @@ export class FileController {
   mergeChunk(@Body() mergeChunkDto: MergeChunkDto) {
     return this.fileService.mergeChunk(mergeChunkDto);
   }
-
-  /**
-   * 修改文件名
-   */
-  @Patch('filename/:id')
-  changeFileName(
-    @Param('id', ParseIntPipe) id: number,
-    @Body() changeFilenameDto: ChangeFilenameDto,
-  ) {
-    return this.fileService.changeFileName(id, changeFilenameDto);
-  }
 }

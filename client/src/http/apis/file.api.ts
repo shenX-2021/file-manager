@@ -1,8 +1,10 @@
 import { axios } from '@src/http/libs';
 
 export interface VerifyFileFormData {
-  fileHash: string;
   filename: string;
+  fileHash: string;
+  startHash: string;
+  endHash: string;
   size: number;
 }
 interface WithoutUploadData {
@@ -45,5 +47,5 @@ export function mergeChunkApi(data: MergeChunkFormData) {
 }
 // 修改文件名
 export function changeFilenameApi(id: number, data: ChangeFilenameFormData) {
-  return axios.patch(`/fm/file/filename/${id}`, data);
+  return axios.patch(`/fm/file/record/filename/${id}`, data);
 }

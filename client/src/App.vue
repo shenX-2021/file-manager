@@ -49,7 +49,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, reactive, ref, watch } from 'vue';
+import { computed, reactive, watch } from 'vue';
 import {
   changeFilenameApi,
   mergeChunkApi,
@@ -80,6 +80,8 @@ interface State {
     file?: File;
     hash?: string;
     worker?: Worker;
+    startHash?: string;
+    endHash?: string;
   };
   hashPercentage: number;
   data: {
@@ -188,31 +190,33 @@ async function handleResume() {
 // 验证文件信息
 async function verifyFile(): Promise<string[] | undefined> {
   if (!state.container.file || !state.container.hash) return;
+  if (!state.container.startHash || !state.container.endHash) return;
   let filename = state.container.file.name;
 
   let res = await verifyFileApi({
     filename: filename,
     fileHash: state.container.hash,
+    startHash: state.container.startHash,
+    endHash: state.container.endHash,
     size: state.container.file.size,
   });
   if (res.code === 1) {
     const { originFileName, id } = res.data;
     await ElMessageBox.confirm(
       `文件名【${filename}】与服务器存档的文件名【${originFileName}】不符，是否需要修改名字`,
-    )
-      .then(async () => {
-        await changeFilenameApi(id, { filename });
-      })
-      .catch((e) => {
-        if (e !== 'cancel') {
-          throw e;
-        }
-        filename = originFileName;
-      });
+      {
+        confirmButtonText: '修改',
+        cancelButtonText: '取消',
+      },
+    ).then(async () => {
+      await changeFilenameApi(id, { filename });
+    });
 
     res = await verifyFileApi({
       filename,
       fileHash: state.container.hash,
+      startHash: state.container.startHash,
+      endHash: state.container.endHash,
       size: state.container.file.size,
     });
 
@@ -306,6 +310,8 @@ function calculateHash(fileChunkList: Blob[]): Promise<string> {
     const length = SIZE >= file.size ? file.size : SIZE;
     let startHash = await calculateBlobHash(file.slice(0, length));
     let endHash = await calculateBlobHash(file.slice(-length));
+    state.container.startHash = startHash;
+    state.container.endHash = endHash;
 
     const hashData = hashList.find(startHash, endHash, file.size);
     if (hashData) {

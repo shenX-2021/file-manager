@@ -3,18 +3,13 @@ import {
   Injectable,
   InternalServerErrorException,
 } from '@nestjs/common';
-import {
-  ChangeFilenameDto,
-  MergeChunkDto,
-  UploadChunkDto,
-  VerifyDto,
-} from '../dtos';
+import { MergeChunkDto, UploadChunkDto, VerifyDto } from '../dtos';
 import * as fse from 'fs-extra';
 import * as path from 'path';
 import { VerifyRo } from '../ros';
 import * as pLimit from 'p-limit';
 import { InjectRepository } from '@nestjs/typeorm';
-import { FileEntity, UserEntity } from '../../../../entities';
+import { FileEntity } from '../../../../entities';
 import { Repository } from 'typeorm';
 import { FileCheckStatusEnum, FileStatusEnum } from '../../../../enums';
 
@@ -25,8 +20,6 @@ export class FileService {
   static CHUNK_MAX_SIZE = 30 * 1024 * 1024;
 
   constructor(
-    @InjectRepository(UserEntity)
-    private readonly userEntityRepository: Repository<UserEntity>,
     @InjectRepository(FileEntity)
     private readonly fileEntityRepository: Repository<FileEntity>,
   ) {}
@@ -256,23 +249,6 @@ export class FileService {
     await fse.remove(chunkDir);
 
     fileEntity.status = FileStatusEnum.FINISHED;
-    await fileEntity.save();
-  }
-
-  /**
-   * 修改文件名
-   */
-  async changeFileName(
-    id: number,
-    changeFilenameDto: ChangeFilenameDto,
-  ): Promise<void> {
-    const { filename } = changeFilenameDto;
-    const fileEntity = await this.fileEntityRepository.findOneBy({ id });
-    if (!fileEntity) {
-      throw new BadRequestException('文件不存在，修改文件失败');
-    }
-
-    fileEntity.filename = filename;
     await fileEntity.save();
   }
 
