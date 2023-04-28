@@ -27,6 +27,9 @@ export default defineConfig({
       },
     },
   },
+  build: {
+    outDir: 'dist/fm/web',
+  },
   resolve: {
     alias: [
       {

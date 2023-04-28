@@ -3,6 +3,7 @@ import { FileModule } from './modules/file/file.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import * as path from 'path';
 import { DATABASE_DIR } from './config';
+import { ServeStaticModule } from '@nestjs/serve-static';
 
 @Module({
   imports: [
@@ -14,6 +15,10 @@ import { DATABASE_DIR } from './config';
       extra: {
         fileMustExist: true,
       },
+    }),
+    ServeStaticModule.forRoot({
+      rootPath: path.join(__dirname, '..', 'client/dist'),
+      exclude: ['/fm/api/*'],
     }),
   ],
   controllers: [],

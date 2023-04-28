@@ -319,7 +319,7 @@ function calculateHash(fileChunkList: Blob[]): Promise<string> {
       resolve(hashData.hash);
     } else {
       // 计算整个文件的hash值
-      state.container.worker = new Worker('/hash.js');
+      state.container.worker = new Worker('./hash.js');
       state.container.worker.postMessage({ fileChunkList });
       state.container.worker.onmessage = (e) => {
         const { percentage, hash } = e.data;

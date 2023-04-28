@@ -1,7 +1,7 @@
 CREATE TABLE tb_user(
-  id INTEGER PRIMARY KEY NOT NULL,
   account TEXT NOT NULL DEFAULT '',
-  pwd TEXT NOT NULL DEFAULT ''
+  pwd TEXT NOT NULL DEFAULT '',
+  salt TEXT NOT NULL DEFAULT ''
 );
 
 CREATE TABLE tb_file(
@@ -18,3 +18,10 @@ CREATE TABLE tb_file(
   gmt_modified INTEGER NOT NULL DEFAULT 0
 );
 
+CREATE INDEX file_name ON tb_file(file_name);
+
+CREATE TABLE tb_version(
+  version_no INTEGER NOT NULL DEFAULT 0
+);
+
+INSERT INTO tb_version(version_no) VALUES (1);
