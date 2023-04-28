@@ -1,6 +1,6 @@
 const path = require('path');
 const fse = require('fs-extra');
-const sqlite = require('better-sqlite3');
+const sqlite = require('sqlite3');
 const dotenv = require('dotenv');
 const crypto = require('crypto');
 const { execSync } = require('child_process');
@@ -45,7 +45,7 @@ async function handleDB() {
     await fse.rm(dbPath);
   } catch (e) {}
 
-  const db = sqlite(dbPath);
+  const db = new sqlite.Database(dbPath);
   const initSQL = fse
     .readFileSync(path.join(__dirname, 'sql/init.sql'))
     .toString();
@@ -83,7 +83,7 @@ function _printError(message) {
  * 日志
  */
 function _print(message) {
-  console.log('🫸', message);
+  console.log('🚴', message);
 }
 
 /**
