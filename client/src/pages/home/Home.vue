@@ -267,6 +267,9 @@ function request({
     Object.values(headers).forEach(([key, value]) =>
       xhr.setRequestHeader(key, value),
     );
+    xhr.ontimeout = () => {
+      onError && onError('上传切片请求超时');
+    };
     xhr.send(data);
     xhr.onload = () => {
       // 将请求成功的 xhr 从列表中删除
