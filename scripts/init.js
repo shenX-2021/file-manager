@@ -65,9 +65,7 @@ async function handleDB() {
 async function handleClient() {
   _print('前端初始化处理...');
   const clientDir = path.join(baseDir, 'client');
-  execSync(`cd ${clientDir}`);
-  execSync('npm ci');
-  execSync('npm run build');
+  execSync(`cd ${clientDir} && npm ci && npm run build`);
   _printSuccess('前端初始化成功！');
 }
 
