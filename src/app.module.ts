@@ -12,6 +12,7 @@ import { ServeStaticModule } from '@nestjs/serve-static';
       type: 'sqlite',
       database: path.join(DATABASE_DIR, 'file.db'),
       entities: [__dirname + '/entities/*.entity{.ts,.js}'],
+      driver: 'better-sqlite3',
       extra: {
         fileMustExist: true,
       },
