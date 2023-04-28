@@ -97,11 +97,6 @@ export class FileRecordService {
    * 校验文件
    */
   async check(id: number): Promise<CheckRo> {
-    await new Promise((resolve) => {
-      setTimeout(() => {
-        resolve(1);
-      }, 3000);
-    });
     const fileEntity = await this.fileEntityRepository.findOneBy({ id });
     if (!fileEntity) {
       throw new BadRequestException(`文件【id: ${id}】不存在`);
