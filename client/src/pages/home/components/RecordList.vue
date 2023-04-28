@@ -4,6 +4,7 @@
       class="mb10 ml10 mr10"
       v-for="(item, idx) in listState.list"
       :key="idx"
+      v-loading="listState.loadingList[idx]"
     >
       <el-row>
         <el-col :span="20">
@@ -38,7 +39,20 @@
           </el-row>
         </el-col>
 
-        <el-col :span="4"> 按钮 </el-col>
+        <el-col :span="4">
+          <el-row justify="end">
+            <el-button type="primary" @click="check(item, idx)">
+              {{
+                item.checkStatus === FileCheckStatusEnum.UNCHECKED
+                  ? '校验文件'
+                  : '重新校验'
+              }}
+            </el-button>
+          </el-row>
+          <el-row justify="end" class="mt10">
+            <el-button type="danger" @click="del(item, idx)"> 删除 </el-button>
+          </el-row>
+        </el-col>
       </el-row>
     </el-card>
   </el-form>
@@ -46,9 +60,42 @@
 
 <script setup lang="ts">
 import { useList } from '@src/pages/home/composables';
-const { listState, getList } = useList();
 import FileStatus from './FileStatus.vue';
 import FileCheckStatus from './FileCheckStatus.vue';
+import { checkFileApi, deleteFileApi, FileRecordData } from '@src/http/apis';
+import { ElMessage } from 'element-plus/es';
+import { FileCheckStatusEnum } from '@src/enums';
+
+const { listState, getList } = useList();
+
+// 校验文件
+async function check(fileRecordData: FileRecordData, idx: number) {
+  listState.loadingList[idx] = true;
+  try {
+    const res = await checkFileApi(fileRecordData.id);
+
+    fileRecordData.checkStatus = res.checkStatus;
+    ElMessage({
+      message: '校验文件成功',
+      type: 'success',
+    });
+  } finally {
+    listState.loadingList[idx] = false;
+  }
+}
+
+// 删除文件记录
+async function del(fileRecordData: FileRecordData, idx: number) {
+  listState.loadingList[idx] = true;
+  await deleteFileApi(fileRecordData.id);
+
+  ElMessage({
+    message: '删除文件成功',
+    type: 'success',
+  });
+  listState.loadingList.splice(idx, 1);
+  listState.list.splice(idx, 1);
+}
 
 async function onCreated() {
   await getList();

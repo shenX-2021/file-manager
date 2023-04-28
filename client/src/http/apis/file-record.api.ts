@@ -29,6 +29,9 @@ export interface FileRecordListRo {
   total: number;
   list: FileRecordData[];
 }
+export interface CheckFileRo {
+  checkStatus: FileCheckStatusEnum;
+}
 
 // 修改文件名
 export function changeFilenameApi(id: number, data: ChangeFilenameFormData) {
@@ -39,4 +42,16 @@ export function fileRecordListApi(
   params: FileRecordListFormData,
 ): Promise<FileRecordListRo> {
   return axios.get('/file/record/list', { params });
+}
+// 通过id获取文件记录
+export function fileRecordDetailApi(id: number): Promise<FileRecordData> {
+  return axios.get(`/file/record/${id}`);
+}
+// 校验文件
+export function checkFileApi(id: number): Promise<CheckFileRo> {
+  return axios.patch(`/file/record/check/${id}`);
+}
+// 校验文件
+export function deleteFileApi(id: number): Promise<void> {
+  return axios.delete(`/file/record/${id}`);
 }

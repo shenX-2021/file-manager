@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   ParseIntPipe,
@@ -18,8 +19,24 @@ export class FileRecordController {
    * 获取文件记录列表
    */
   @Get('list')
-  mergeChunk(@Query() listDto: ListDto) {
+  list(@Query() listDto: ListDto) {
     return this.fileRecordService.list(listDto);
+  }
+
+  /**
+   * 通过id查找文件记录信息
+   */
+  @Get(':id')
+  detail(@Param('id', ParseIntPipe) id: number) {
+    return this.fileRecordService.detail(id);
+  }
+
+  /**
+   * 通过id删除文件记录
+   */
+  @Delete(':id')
+  del(@Param('id', ParseIntPipe) id: number) {
+    return this.fileRecordService.del(id);
   }
 
   /**

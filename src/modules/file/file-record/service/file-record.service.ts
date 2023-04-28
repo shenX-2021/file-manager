@@ -15,6 +15,7 @@ export class FileRecordService {
   constructor(
     @InjectRepository(FileEntity)
     private readonly fileEntityRepository: Repository<FileEntity>,
+    private readonly fileService: FileService,
   ) {}
 
   /**
@@ -44,6 +45,38 @@ export class FileRecordService {
   }
 
   /**
+   * 通过id查找文件记录信息
+   */
+  async detail(id: number): Promise<FileEntity> {
+    const fileEntity = await this.fileEntityRepository.findOneBy({ id });
+    if (!fileEntity) {
+      throw new BadRequestException(`文件记录【id: ${id}】不存在`);
+    }
+
+    return fileEntity;
+  }
+
+  /**
+   * 删除文件记录
+   */
+  async del(id: number): Promise<void> {
+    const fileEntity = await this.fileEntityRepository.findOneBy({ id });
+    if (!fileEntity) {
+      throw new BadRequestException(`文件记录【id: ${id}】不存在`);
+    }
+
+    try {
+      await fse.rm(fileEntity.filePath);
+      const chunkDir = this.fileService.getChunkDir(fileEntity.fileHash);
+      await fse.remove(chunkDir);
+    } catch (e) {
+      console.error(`移除文件【id: ${id}】报错`, e);
+    }
+
+    await this.fileEntityRepository.remove(fileEntity);
+  }
+
+  /**
    * 修改文件名
    */
   async changeFileName(
@@ -64,6 +97,11 @@ export class FileRecordService {
    * 校验文件
    */
   async check(id: number): Promise<CheckRo> {
+    await new Promise((resolve) => {
+      setTimeout(() => {
+        resolve(1);
+      }, 3000);
+    });
     const fileEntity = await this.fileEntityRepository.findOneBy({ id });
     if (!fileEntity) {
       throw new BadRequestException(`文件【id: ${id}】不存在`);

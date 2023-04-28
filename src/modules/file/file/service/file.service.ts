@@ -264,7 +264,7 @@ export class FileService {
   /**
    * 获取文件的chunk块的目录
    */
-  private getChunkDir(fileHash: string): string {
+  public getChunkDir(fileHash: string): string {
     return path.join(UPLOAD_CHUNK_DIR, fileHash);
   }
 

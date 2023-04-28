@@ -110,7 +110,7 @@ const state = reactive<State>({
   requestList: [],
   status: UploadStatusEnum.WAIT,
 });
-const { listState } = useList();
+const { listState, getList } = useList();
 
 function initState() {
   state.container = {
@@ -427,6 +427,7 @@ async function uploadChunks(uploadedList: string[] = []) {
 
     ElMessage({ message: '上传文件成功', type: 'success' });
     initState();
+    await getList();
   } else {
     ElMessage({ message: '未知原因，上传切片不成功', type: 'error' });
   }
