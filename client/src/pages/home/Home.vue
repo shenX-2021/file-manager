@@ -61,10 +61,11 @@ import {
   mergeChunkApi,
   verifyFileApi,
 } from '@src/http/apis';
-import { hashList } from '@src/utils';
 import { ElMessage, ElMessageBox } from 'element-plus/es';
 import { UploadStatusEnum } from '@src/enums';
 import RecordList from '@src/pages/home/components/RecordList.vue';
+import pLimit from 'p-limit';
+import { useList } from '@src/pages/home/composables';
 
 // 切片大小
 const SIZE = 30 * 1024 * 1024;
@@ -109,6 +110,7 @@ const state = reactive<State>({
   requestList: [],
   status: UploadStatusEnum.WAIT,
 });
+const { listState } = useList();
 
 function initState() {
   state.container = {
@@ -307,10 +309,15 @@ function calculateHash(fileChunkList: Blob[]): Promise<string> {
     state.container.startHash = startHash;
     state.container.endHash = endHash;
 
-    const hashData = hashList.find(startHash, endHash, file.size);
+    const hashData = listState.list.find(
+      (item) =>
+        item.startHash === startHash &&
+        item.endHash === endHash &&
+        item.size === file.size,
+    );
     if (hashData) {
       state.hashPercentage = 100;
-      resolve(hashData.hash);
+      resolve(hashData.fileHash);
     } else {
       // 计算整个文件的hash值
       state.container.worker = new Worker('./hash.js');
@@ -320,12 +327,6 @@ function calculateHash(fileChunkList: Blob[]): Promise<string> {
 
         state.hashPercentage = percentage;
         if (hash) {
-          hashList.add({
-            hash,
-            startHash,
-            endHash,
-            size: file.size,
-          });
           resolve(hash);
         } else {
           // TODO: 计算hash失败的处理
@@ -388,7 +389,8 @@ async function uploadChunks(uploadedList: string[] = []) {
   if (!state.container.file || !state.container.hash) return;
   const file = state.container.file;
   const fileHash = state.container.hash;
-  const requestList = state.data
+  const limit = pLimit(6);
+  const uploadList = state.data
     .filter(({ index }) => !uploadedList.includes(index.toString()))
     .map(({ chunk, index }) => {
       const formData = new FormData();
@@ -400,24 +402,31 @@ async function uploadChunks(uploadedList: string[] = []) {
       return { formData, index };
     })
     .map(({ formData, index }) =>
-      request({
-        url: '/fm/api/file/upload',
-        data: formData,
-        onProgress: createProgressHandler(state.data[index]),
-        onError: createErrorHandler(state.data[index]),
-        requestList: state.requestList,
-      }),
+      limit(() =>
+        request({
+          url: '/fm/api/file/upload',
+          data: formData,
+          onProgress: createProgressHandler(state.data[index]),
+          onError: createErrorHandler(state.data[index]),
+          requestList: state.requestList,
+        }),
+      ),
     );
-  await Promise.all(requestList);
+  await Promise.all(uploadList);
 
-  // 合并切片请求
-  await mergeChunkApi({
-    fileHash: state.container.hash,
-    size: state.container.file.size,
-  });
+  const checkUploadedList = await verifyFile();
+  if (checkUploadedList?.length === Math.ceil(file.size / SIZE)) {
+    // 合并切片请求
+    await mergeChunkApi({
+      fileHash: state.container.hash,
+      size: state.container.file.size,
+    });
 
-  ElMessage({ message: '上传文件成功', type: 'success' });
-  initState();
+    ElMessage({ message: '上传文件成功', type: 'success' });
+    initState();
+  } else {
+    ElMessage({ message: '未知原因，上传切片不成功', type: 'error' });
+  }
 }
 // 用闭包保存每个 chunk 的进度数据
 function createProgressHandler(item) {
