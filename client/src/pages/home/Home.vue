@@ -3,19 +3,24 @@
     <div>
       <input
         type="file"
-        :disabled="state.status !== Status.wait"
+        :disabled="state.status !== UploadStatusEnum.WAIT"
         multiple
         @change="handleFileChange"
       />
       <el-button @click="handleUpload" :disabled="uploadDisabled">
         upload
       </el-button>
-      <el-button @click="handleResume" v-if="state.status === Status.pause">
+      <el-button
+        @click="handleResume"
+        v-if="state.status === UploadStatusEnum.PAUSE"
+      >
         resume
       </el-button>
       <el-button
         v-else
-        :disabled="state.status !== Status.uploading || !state.container.hash"
+        :disabled="
+          state.status !== UploadStatusEnum.UPLOADING || !state.container.hash
+        "
         @click="handlePause"
       >
         pause
@@ -45,6 +50,7 @@
         </template>
       </el-table-column>
     </el-table>
+    <record-list class="mt10" />
   </div>
 </template>
 
@@ -57,15 +63,11 @@ import {
 } from '@src/http/apis';
 import { hashList } from '@src/utils';
 import { ElMessage, ElMessageBox } from 'element-plus/es';
+import { UploadStatusEnum } from '@src/enums';
+import RecordList from '@src/pages/home/components/RecordList.vue';
 
 // 切片大小
 const SIZE = 30 * 1024 * 1024;
-
-enum Status {
-  wait = 'wait',
-  pause = 'pause',
-  uploading = 'uploading',
-}
 
 interface RequestOpts {
   url: string;
@@ -94,7 +96,7 @@ interface State {
     percentage: number;
   }[];
   requestList: XMLHttpRequest[];
-  status: Status;
+  status: UploadStatusEnum;
 }
 const state = reactive<State>({
   container: {
@@ -105,7 +107,7 @@ const state = reactive<State>({
   hashPercentage: 0,
   data: [],
   requestList: [],
-  status: Status.wait,
+  status: UploadStatusEnum.WAIT,
 });
 
 function initState() {
@@ -117,7 +119,7 @@ function initState() {
   state.hashPercentage = 0;
   state.data = [];
   state.requestList = [];
-  state.status = Status.wait;
+  state.status = UploadStatusEnum.WAIT;
 }
 
 function transformByte(val: number) {
@@ -128,7 +130,9 @@ function transformByte(val: number) {
 const uploadDisabled = computed(
   () =>
     !state.container.file ||
-    ([Status.pause, Status.uploading] as Status[]).includes(state.status),
+    (
+      [UploadStatusEnum.PAUSE, UploadStatusEnum.UPLOADING] as UploadStatusEnum[]
+    ).includes(state.status),
 );
 // 上传进度条
 const uploadPercentage = computed(() => {
@@ -153,7 +157,7 @@ async function handleDelete() {
 }
 // 暂停
 async function handlePause() {
-  state.status = Status.pause;
+  state.status = UploadStatusEnum.PAUSE;
   await resetData();
 }
 // 重置数据
@@ -166,7 +170,7 @@ async function resetData() {
 }
 // 恢复上传
 async function handleResume() {
-  state.status = Status.uploading;
+  state.status = UploadStatusEnum.UPLOADING;
   const uploadedList = await verifyFile();
 
   if (uploadedList) {
@@ -225,7 +229,7 @@ async function verifyFile(): Promise<string[] | undefined> {
         message: '该文件已上传，无需重复上传',
         type: 'success',
       });
-      state.status = Status.wait;
+      state.status = UploadStatusEnum.WAIT;
       initState();
       return;
     }
@@ -360,7 +364,7 @@ function handleFileChange(e: any) {
 // 上传文件请求处理
 async function handleUpload() {
   if (!state.container.file) return;
-  state.status = Status.uploading;
+  state.status = UploadStatusEnum.UPLOADING;
   const fileChunkList = createFileChunk(state.container.file);
   state.container.hash = await calculateHash(fileChunkList);
 

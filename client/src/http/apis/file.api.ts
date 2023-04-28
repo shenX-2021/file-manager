@@ -33,10 +33,6 @@ export interface MergeChunkFormData {
   size: number;
 }
 
-export interface ChangeFilenameFormData {
-  filename: string;
-}
-
 // 验证文件信息
 export function verifyFileApi(data: VerifyFileFormData): Promise<VerifyRo> {
   return axios.post('/file/verify', data);
@@ -44,8 +40,4 @@ export function verifyFileApi(data: VerifyFileFormData): Promise<VerifyRo> {
 // 合并文件
 export function mergeChunkApi(data: MergeChunkFormData) {
   return axios.post('/file/merge', data);
-}
-// 修改文件名
-export function changeFilenameApi(id: number, data: ChangeFilenameFormData) {
-  return axios.patch(`/file/record/filename/${id}`, data);
 }

@@ -57,6 +57,7 @@ export class FileService {
         },
       };
     }
+    // 文件记录状态为已完成，无需重复上传
     if (fileEntity.status === FileStatusEnum.FINISHED) {
       return {
         code: 0,
@@ -70,10 +71,10 @@ export class FileService {
       const fileStat = await fse.stat(filePath);
 
       if (fileStat.size === size) {
+        // 大小相同，则认为是文件一致，无需重复上传
         fileEntity.status = FileStatusEnum.FINISHED;
         await fileEntity.save();
 
-        // 大小相同，则认为是文件一致，无需重复上传
         return {
           code: 0,
           data: {
@@ -111,11 +112,17 @@ export class FileService {
           }
         }
       }
+      // 获取已上传的切片列表
       uploadedList = await fse.readdir(chunkDir);
+      // 当切片已全部合并完成，将记录状态改为已上传切片
+      if (uploadedList.length === chunkCount) {
+        fileEntity.status = FileStatusEnum.CHUNK_UPLOADED;
+        await fileEntity.save();
+      }
     }
 
     if (fileEntity.status === FileStatusEnum.INIT) {
-      fileEntity.status = FileStatusEnum.CHUNK_UPLOADED;
+      fileEntity.status = FileStatusEnum.CHUNK_UPLOADING;
       await fileEntity.save();
     }
 
@@ -209,6 +216,11 @@ export class FileService {
     } catch (e) {
       // do nothing
     }
+
+    // 将记录状态改为正在合并切片
+    fileEntity.status = FileStatusEnum.CHUNK_MERGING;
+    await fileEntity.save();
+    // 开始合并切片
     const limit = pLimit(12);
     await fse.access(chunkDir).catch(() => {
       throw new BadRequestException('不存在该文件的切片');

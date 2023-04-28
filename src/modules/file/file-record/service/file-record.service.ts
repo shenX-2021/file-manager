@@ -8,7 +8,7 @@ import * as fse from 'fs-extra';
 import { FileCheckStatusEnum } from '../../../../enums';
 import { FileService } from '../../file/service/file.service';
 import { md5 } from '../../../../utils';
-import { CheckRo } from '../ros';
+import { CheckRo, ListRo } from '../ros';
 
 @Injectable()
 export class FileRecordService {
@@ -20,7 +20,7 @@ export class FileRecordService {
   /**
    * 获取文件记录列表
    */
-  async list(listDto: ListDto) {
+  async list(listDto: ListDto): Promise<ListRo> {
     const { pageNumber, pageSize, filename } = listDto;
 
     const where: FindOptionsWhere<FileEntity> = {};

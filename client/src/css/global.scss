@@ -1,0 +1,90 @@
+@for $i from 0 through 100 {
+  .mt#{$i} {
+    margin-top: #{$i}px;
+  }
+  .mb#{$i} {
+    margin-bottom: #{$i}px;
+  }
+  .ml#{$i} {
+    margin-left: #{$i}px;
+  }
+  .mr#{$i} {
+    margin-right: #{$i}px;
+  }
+
+  .pt#{$i} {
+    padding-top: #{$i}px;
+  }
+  .pb#{$i} {
+    padding-bottom: #{$i}px;
+  }
+  .pl#{$i} {
+    padding-left: #{$i}px;
+  }
+  .pr#{$i} {
+    padding-right: #{$i}px;
+  }
+
+  .w#{$i} {
+    width: #{$i}px;
+  }
+  .h#{$i} {
+    height: #{$i}px;
+  }
+}
+
+@each $i in 9 10 11 12 13 14 16 18 20 21 22 23 24 26 28 30 32 36 {
+  .fs#{$i} {
+    font-size: #{$i}px;
+  }
+}
+
+@each $fw in 400 500 700 {
+  .fw#{$fw} {
+    font-weight: #{$fw};
+  }
+}
+
+.overflowScrolling {
+  overflow-scrolling: touch;
+  -webkit-overflow-scrolling: touch;
+}
+.flex {
+  display: flex;
+}
+.flexCenter {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.flexToPart {
+  display: flex;
+  justify-content: space-between;
+}
+.flexHorizontalCenter {
+  display: flex;
+  justify-content: center;
+}
+.flexVerticalCenter {
+  display: flex;
+  align-items: center;
+}
+
+// margin-top防止顶部溢出父元素
+.preventTopOver:before {
+  content: '';
+  display: table;
+}
+
+.w100vw {
+  width: 100vw;
+}
+.w100per {
+  width: 100%;
+}
+.h100vh {
+  height: 100vh;
+}
+.h100per {
+  height: 100%;
+}

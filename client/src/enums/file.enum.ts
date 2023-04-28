@@ -1,3 +1,19 @@
+// 文件上传状态
+export enum UploadStatusEnum {
+  /**
+   * 等待上传
+   */
+  WAIT = 'wait',
+  /**
+   * 暂停上传
+   */
+  PAUSE = 'pause',
+  /**
+   * 上传中
+   */
+  UPLOADING = 'uploading',
+}
+
 // 文件状态
 export enum FileStatusEnum {
   /**
