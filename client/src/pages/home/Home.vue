@@ -29,7 +29,7 @@
       </div>
       <div>
         <div>percentage</div>
-        <el-progress :percentage="state.fakeUploadPercentage" />
+        <el-progress :percentage="uploadPercentage" />
       </div>
     </div>
     <el-table :data="state.data">
@@ -49,7 +49,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, reactive, watch } from 'vue';
+import { computed, reactive } from 'vue';
 import {
   changeFilenameApi,
   mergeChunkApi,
@@ -73,6 +73,7 @@ interface RequestOpts {
   data?: any;
   headers?: Record<string, string>;
   onProgress?: (this: XMLHttpRequest, ev: ProgressEvent) => any;
+  onError?: (message: string) => any;
   requestList?: XMLHttpRequest[];
 }
 interface State {
@@ -94,7 +95,6 @@ interface State {
   }[];
   requestList: XMLHttpRequest[];
   status: Status;
-  fakeUploadPercentage: number;
 }
 const state = reactive<State>({
   container: {
@@ -106,10 +106,6 @@ const state = reactive<State>({
   data: [],
   requestList: [],
   status: Status.wait,
-  // 当暂停时会取消 xhr 导致进度条后退
-  // 为了避免这种情况，需要定义一个假的进度条
-  // use fake progress to avoid progress backwards when upload is paused
-  fakeUploadPercentage: 0,
 });
 
 function initState() {
@@ -122,7 +118,6 @@ function initState() {
   state.data = [];
   state.requestList = [];
   state.status = Status.wait;
-  state.fakeUploadPercentage = 0;
 }
 
 function transformByte(val: number) {
@@ -143,15 +138,6 @@ const uploadPercentage = computed(() => {
     .reduce((acc, cur) => acc + cur, 0);
   return parseInt((loaded / state.container.file.size).toFixed(2));
 });
-
-watch(
-  () => uploadPercentage.value,
-  (now) => {
-    if (now > state.fakeUploadPercentage) {
-      state.fakeUploadPercentage = now;
-    }
-  },
-);
 
 // 删除
 async function handleDelete() {
@@ -264,6 +250,7 @@ function request({
   data,
   headers = {},
   onProgress,
+  onError,
   requestList,
 }: RequestOpts): any {
   return new Promise((resolve) => {
@@ -275,16 +262,19 @@ function request({
       xhr.setRequestHeader(key, value),
     );
     xhr.send(data);
-    xhr.onload = (e: any) => {
+    xhr.onload = () => {
       // 将请求成功的 xhr 从列表中删除
       // remove xhr which status is success
       if (requestList) {
         const xhrIndex = requestList.findIndex((item) => item === xhr);
         requestList.splice(xhrIndex, 1);
       }
-      resolve({
-        data: e.target?.response,
-      });
+
+      if (xhr.status === 413) {
+        onError && onError('大小超过了限制，请检查服务器的限制');
+      } else {
+        resolve(1);
+      }
     };
     // 暴露当前 xhr 给外部
     // export xhr
@@ -410,6 +400,7 @@ async function uploadChunks(uploadedList: string[] = []) {
         url: '/fm/api/file/upload',
         data: formData,
         onProgress: createProgressHandler(state.data[index]),
+        onError: createErrorHandler(state.data[index]),
         requestList: state.requestList,
       }),
     );
@@ -428,6 +419,17 @@ async function uploadChunks(uploadedList: string[] = []) {
 function createProgressHandler(item) {
   return (e) => {
     item.percentage = parseInt(String((e.loaded / e.total) * 100));
+  };
+}
+// 用闭包保存每个 chunk 的失败后的处理
+function createErrorHandler(item) {
+  return (message: string) => {
+    item.percentage = 0;
+    ElMessage({
+      type: 'error',
+      message,
+    });
+    throw new Error('大小超过了限制，请检查服务器的限制');
   };
 }
 </script>
