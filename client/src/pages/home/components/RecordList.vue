@@ -40,7 +40,7 @@
         </el-col>
 
         <el-col :span="4">
-          <el-row justify="end">
+          <el-row justify="end" v-if="item.status === FileStatusEnum.FINISHED">
             <el-button type="primary" @click="check(item, idx)">
               {{
                 item.checkStatus === FileCheckStatusEnum.UNCHECKED
@@ -49,7 +49,11 @@
               }}
             </el-button>
           </el-row>
-          <el-row justify="end" class="mt10">
+          <el-row
+            justify="end"
+            class="mt10"
+            v-if="item.status === FileStatusEnum.FINISHED"
+          >
             <el-button type="info" @click="downloadFile(item)">
               下载
             </el-button>
@@ -69,7 +73,7 @@ import FileStatus from './FileStatus.vue';
 import FileCheckStatus from './FileCheckStatus.vue';
 import { checkFileApi, deleteFileApi, FileRecordData } from '@src/http/apis';
 import { ElMessage } from 'element-plus/es';
-import { FileCheckStatusEnum } from '@src/enums';
+import { FileCheckStatusEnum, FileStatusEnum } from '@src/enums';
 import { download } from '@src/utils';
 
 const { listState, getList } = useList();

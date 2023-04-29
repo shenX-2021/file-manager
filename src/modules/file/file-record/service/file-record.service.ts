@@ -115,7 +115,12 @@ export class FileRecordService {
       throw new BadRequestException(`文件【id: ${id}】不存在`);
     }
 
-    const { startHash, endHash, size, filePath } = fileEntity;
+    const { startHash, endHash, size, filePath, status } = fileEntity;
+
+    if (status !== FileStatusEnum.FINISHED) {
+      throw new BadRequestException('文件尚未完成上传，无法校验');
+    }
+
     let fileStat: fse.Stats;
     try {
       fileStat = await fse.stat(filePath);

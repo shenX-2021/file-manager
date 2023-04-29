@@ -1,4 +1,5 @@
 import streamSaver from 'streamsaver';
+import { ElMessage } from 'element-plus/es';
 
 /**
  * 流式下载，支持大文件
@@ -7,7 +8,13 @@ export function download(id: number, filename: string) {
   const url = `/fm/api/file/download/${id}`;
   const fileStream = streamSaver.createWriteStream(filename);
 
-  fetch(url).then((res) => {
+  fetch(url).then(async (res) => {
+    if (res.status !== 200) {
+      ElMessage({
+        message: (await res.json()).message,
+        type: 'error',
+      });
+    }
     const readableStream = res.body;
 
     // more optimized
