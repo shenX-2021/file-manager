@@ -232,7 +232,9 @@ export class FileService {
       return limit(() => {
         return new Promise(async (resolve) => {
           // 直接读取文件到内存，会比stream流更快，但更占内存
-          const chunk = await fse.readFile(path.join(chunkDir, chunkName));
+          const chunk = await fse.readFile(path.join(chunkDir, chunkName), {
+            flag: 'rs+',
+          });
           const index = parseInt(chunkName);
           const writeStream = fse.createWriteStream(filePath, {
             start: index * FileService.CHUNK_MAX_SIZE,
