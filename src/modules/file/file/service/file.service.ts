@@ -236,7 +236,7 @@ export class FileService {
           const index = parseInt(chunkName);
           const writeStream = fse.createWriteStream(filePath, {
             start: index * FileService.CHUNK_MAX_SIZE,
-            flags: 'a',
+            flags: 'as+',
           });
           writeStream.on('close', () => {
             resolve(index);
