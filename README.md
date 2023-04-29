@@ -12,12 +12,17 @@ vim .env
 npm ci
 ```
 
-### 3.构建代码
+### 3.执行初始化脚本
+```bash
+node scripts/init.js
+```
+
+### 4.构建代码
 ```bash
 npm run build
 ```
 
-### 4.启动服务
+### 5.启动服务
 ```bash
 npm run start:prod
 ```
