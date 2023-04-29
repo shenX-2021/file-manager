@@ -50,6 +50,11 @@
             </el-button>
           </el-row>
           <el-row justify="end" class="mt10">
+            <el-button type="info" @click="downloadFile(item)">
+              下载
+            </el-button>
+          </el-row>
+          <el-row justify="end" class="mt10">
             <el-button type="danger" @click="del(item, idx)"> 删除 </el-button>
           </el-row>
         </el-col>
@@ -65,6 +70,7 @@ import FileCheckStatus from './FileCheckStatus.vue';
 import { checkFileApi, deleteFileApi, FileRecordData } from '@src/http/apis';
 import { ElMessage } from 'element-plus/es';
 import { FileCheckStatusEnum } from '@src/enums';
+import { download } from '@src/utils';
 
 const { listState, getList } = useList();
 
@@ -82,6 +88,11 @@ async function check(fileRecordData: FileRecordData, idx: number) {
   } finally {
     listState.loadingList[idx] = false;
   }
+}
+
+// 下载文件
+async function downloadFile(fileRecordData: FileRecordData) {
+  await download(fileRecordData.id, fileRecordData.filename);
 }
 
 // 删除文件记录

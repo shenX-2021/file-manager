@@ -2,6 +2,8 @@ import {
   BadRequestException,
   Injectable,
   InternalServerErrorException,
+  NotFoundException,
+  StreamableFile,
 } from '@nestjs/common';
 import { MergeChunkDto, UploadChunkDto, VerifyDto } from '../dtos';
 import * as fse from 'fs-extra';
@@ -259,6 +261,29 @@ export class FileService {
 
     fileEntity.status = FileStatusEnum.FINISHED;
     await fileEntity.save();
+  }
+
+  /**
+   * 下载文件
+   */
+  async download(id: number): Promise<StreamableFile> {
+    const fileEntity = await this.fileEntityRepository.findOneBy({ id });
+    if (!fileEntity) {
+      throw new NotFoundException('文件记录不存在');
+    }
+    if (fileEntity.status !== FileStatusEnum.FINISHED) {
+      throw new BadRequestException('文件尚未上传成功');
+    }
+
+    try {
+      await fse.access(fileEntity.filePath);
+    } catch (e) {
+      throw new NotFoundException('文件不存在');
+    }
+
+    const file = fse.createReadStream(fileEntity.filePath);
+
+    return new StreamableFile(file);
   }
 
   /**

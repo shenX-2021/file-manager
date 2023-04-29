@@ -1,6 +1,9 @@
 import {
   Body,
   Controller,
+  Get,
+  Param,
+  ParseIntPipe,
   Post,
   UploadedFile,
   UseInterceptors,
@@ -39,5 +42,13 @@ export class FileController {
   @Post('merge')
   mergeChunk(@Body() mergeChunkDto: MergeChunkDto) {
     return this.fileService.mergeChunk(mergeChunkDto);
+  }
+
+  /**
+   * 下载文件
+   */
+  @Get('download/:id')
+  download(@Param('id', ParseIntPipe) id: number) {
+    return this.fileService.download(id);
   }
 }
