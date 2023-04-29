@@ -5,7 +5,7 @@ import { FileEntity } from '../../../../entities';
 import { FindOptionsWhere, ILike, Repository } from 'typeorm';
 import { isDefined } from 'class-validator';
 import * as fse from 'fs-extra';
-import { FileCheckStatusEnum } from '../../../../enums';
+import { FileCheckStatusEnum, FileStatusEnum } from '../../../../enums';
 import { FileService } from '../../file/service/file.service';
 import { md5 } from '../../../../utils';
 import { CheckRo, ListRo } from '../ros';
@@ -65,13 +65,26 @@ export class FileRecordService {
       throw new BadRequestException(`文件记录【id: ${id}】不存在`);
     }
 
-    try {
-      await fse.rm(fileEntity.filePath);
-      const chunkDir = this.fileService.getChunkDir(fileEntity.fileHash);
-      await fse.remove(chunkDir);
-    } catch (e) {
-      console.error(`移除文件【id: ${id}】报错`, e);
+    // 文件已合并完成，则需要删除文件
+    if (fileEntity.status === FileStatusEnum.FINISHED) {
+      await fse.rm(fileEntity.filePath).catch((e) => {
+        console.error(`移除文件【id: ${id}】报错`, e);
+      });
     }
+
+    // 文件切片正在上传中，则需要删除切片目录 TODO: 停止切片上传
+    if (
+      [FileStatusEnum.CHUNK_UPLOADING, FileStatusEnum.CHUNK_UPLOADED].includes(
+        fileEntity.status,
+      )
+    ) {
+      const chunkDir = this.fileService.getChunkDir(fileEntity.fileHash);
+      await fse.remove(chunkDir).catch((e) => {
+        console.error(`移除切片目录【id: ${id}】报错`, e);
+      });
+    }
+
+    // TODO: 切片正在合并的状态的处理
 
     await this.fileEntityRepository.remove(fileEntity);
   }
