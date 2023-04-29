@@ -8,6 +8,7 @@ import {
 import { MergeChunkDto, UploadChunkDto, VerifyDto } from '../dtos';
 import * as fse from 'fs-extra';
 import * as path from 'path';
+import * as fsp from 'fs/promises';
 import { VerifyRo } from '../ros';
 import * as pLimit from 'p-limit';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -223,32 +224,30 @@ export class FileService {
     fileEntity.status = FileStatusEnum.CHUNK_MERGING;
     await fileEntity.save();
     // 开始合并切片
-    const limit = pLimit(12);
+    const limit = pLimit(9);
     await fse.access(chunkDir).catch(() => {
       throw new BadRequestException('不存在该文件的切片');
     });
     const chunkList = await fse.readdir(chunkDir);
+
+    const fileHandle = await fsp.open(filePath, 'w');
     const promises = chunkList.map((chunkName) => {
-      return limit(() => {
-        return new Promise(async (resolve) => {
+      return limit(() => new Promise(async (resolve) => {
           // 直接读取文件到内存，会比stream流更快，但更占内存
           const chunk = await fse.readFile(path.join(chunkDir, chunkName), {
-            flag: 'rs+',
+            flag: 'r',
           });
           const index = parseInt(chunkName);
-          const writeStream = fse.createWriteStream(filePath, {
-            start: index * FileService.CHUNK_MAX_SIZE,
-            flags: 'as+',
-          });
-          writeStream.on('close', () => {
-            resolve(index);
-          });
-          writeStream.end(chunk);
-        });
-      });
+
+          await fileHandle.write(chunk,0, chunk.byteLength, index * FileService.CHUNK_MAX_SIZE);
+
+          resolve(index);
+        })
+      )
     });
 
     await Promise.all(promises);
+    await fileHandle.close();
 
     try {
       const fileStat = await fse.stat(filePath);
