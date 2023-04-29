@@ -176,7 +176,7 @@ export class FileService {
       // do nothing
     }
 
-    await fse.writeFile(chunkPath, file.buffer, { flag: 'as+' });
+    await fse.writeFile(chunkPath, file.buffer, { flag: 'wx' });
     return {
       status: 1,
     };
