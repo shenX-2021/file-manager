@@ -9,6 +9,7 @@ import { MergeChunkDto, UploadChunkDto, VerifyDto } from '../dtos';
 import * as fse from 'fs-extra';
 import * as path from 'path';
 import * as fsp from 'fs/promises';
+import checkDiskSpace from 'check-disk-space';
 import { VerifyRo } from '../ros';
 import * as pLimit from 'p-limit';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -204,6 +205,10 @@ export class FileService {
     const filePath = fileEntity.filePath;
     const chunkDir = this.getChunkDir(fileHash);
 
+    // 所需磁盘空间，为合并成功，留100M冗余。
+    let needDiskSize = fileEntity.size + 100 * 1024 * 1024;
+
+    // 校验文件
     try {
       const fileStat = await fse.stat(filePath);
       // 文件大小相同，则认为检验成功，无需重复合并
@@ -216,8 +221,16 @@ export class FileService {
         // 文件大于预期大小，删除文件
         await fse.rm(filePath);
       }
+      // 上次合并失败导致文件残留，计算磁盘空间时需减去这部分大小
+      needDiskSize -= fileStat.size;
     } catch (e) {
       // do nothing
+    }
+
+    // 检查磁盘空间
+    const diskSpace = await checkDiskSpace(UPLOAD_FILE_DIR);
+    if (diskSpace.free < needDiskSize) {
+      throw new BadRequestException('磁盘空间不足，无法合并切片');
     }
 
     // 将记录状态改为正在合并切片
@@ -232,22 +245,41 @@ export class FileService {
 
     const fileHandle = await fsp.open(filePath, 'w');
     const promises = chunkList.map((chunkName) => {
-      return limit(() => new Promise(async (resolve) => {
-          // 直接读取文件到内存，会比stream流更快，但更占内存
-          const chunk = await fse.readFile(path.join(chunkDir, chunkName), {
-            flag: 'r',
-          });
-          const index = parseInt(chunkName);
+      return limit(
+        () =>
+          new Promise(async (resolve, reject) => {
+            // 直接读取文件到内存，会比stream流更快，但更占内存
+            const chunk = await fse.readFile(path.join(chunkDir, chunkName), {
+              flag: 'r',
+            });
+            const index = parseInt(chunkName);
 
-          await fileHandle.write(chunk,0, chunk.byteLength, index * FileService.CHUNK_MAX_SIZE);
+            await fileHandle
+              .write(
+                chunk,
+                0,
+                chunk.byteLength,
+                index * FileService.CHUNK_MAX_SIZE,
+              )
+              .catch((e) => reject(e));
 
-          resolve(index);
-        })
-      )
+            resolve(index);
+          }),
+      );
     });
 
-    await Promise.all(promises);
-    await fileHandle.close();
+    try {
+      await Promise.all(promises);
+    } catch (e) {
+      fileEntity.status = FileStatusEnum.CHUNK_UPLOADED;
+      await fileEntity.save();
+      if (e.message === 'ENOSPC: no space left on device, write') {
+        throw new BadRequestException('磁盘空间不足，无法合并切片');
+      }
+      throw e;
+    } finally {
+      await fileHandle.close();
+    }
 
     try {
       const fileStat = await fse.stat(filePath);

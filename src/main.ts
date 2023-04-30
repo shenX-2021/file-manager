@@ -5,6 +5,7 @@ import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
 import * as fse from 'fs-extra';
 import { UPLOAD_CHUNK_DIR, UPLOAD_FILE_DIR } from './config';
+import * as process from 'process';
 
 const port = 8888;
 
@@ -25,3 +26,12 @@ async function bootstrap() {
   console.debug('Listening port', port);
 }
 bootstrap();
+
+process.on('uncaughtException', (e) => {
+  if (e.message === 'ENOSPC: no space left on device, write') {
+    // TODO: 可以做邮件提醒
+    console.error('磁盘空间不足错误:', e);
+  }
+
+  throw e;
+});
