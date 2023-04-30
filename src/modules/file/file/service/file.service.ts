@@ -230,6 +230,8 @@ export class FileService {
     // 检查磁盘空间
     const diskSpace = await checkDiskSpace(UPLOAD_FILE_DIR);
     if (diskSpace.free < needDiskSize) {
+      fileEntity.status = FileStatusEnum.CHUNK_UPLOADED;
+      await fileEntity.save();
       throw new BadRequestException('磁盘空间不足，无法合并切片');
     }
 
