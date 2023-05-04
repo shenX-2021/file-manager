@@ -53,3 +53,11 @@ export enum FileCheckStatusEnum {
    */
   FAILURE = 2,
 }
+
+// 文件配置
+export enum FileConfigEnum {
+  /**
+   * 文件大小
+   */
+  SIZE = 30 * 1024 * 1024,
+}

@@ -8,9 +8,11 @@ export interface VerifyFileFormData {
   size: number;
 }
 interface WithoutUploadData {
+  id: number;
   needUpload: false;
 }
 interface NeedUploadData {
+  id: number;
   needUpload: true;
   uploadedList: string[];
 }

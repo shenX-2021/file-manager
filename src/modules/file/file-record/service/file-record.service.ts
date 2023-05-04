@@ -1,8 +1,8 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
-import { ChangeFilenameDto, ListDto } from '../dtos';
+import { ChangeFilenameDto, DetailByPropDto, ListDto } from '../dtos';
 import { InjectRepository } from '@nestjs/typeorm';
 import { FileEntity } from '../../../../entities';
-import { FindOptionsWhere, ILike, Repository } from 'typeorm';
+import { FindOptionsWhere, ILike, In, Not, Repository } from 'typeorm';
 import { isDefined } from 'class-validator';
 import * as fse from 'fs-extra';
 import { FileCheckStatusEnum, FileStatusEnum } from '../../../../enums';
@@ -24,7 +24,9 @@ export class FileRecordService {
   async list(listDto: ListDto): Promise<ListRo> {
     const { pageNumber, pageSize, filename } = listDto;
 
-    const where: FindOptionsWhere<FileEntity> = {};
+    const where: FindOptionsWhere<FileEntity> = {
+      status: Not(In([FileStatusEnum.INIT, FileStatusEnum.CHUNK_UPLOADING])),
+    };
 
     if (isDefined(filename) && filename.length > 0) {
       where.filename = ILike(`%${filename}%`);
@@ -34,6 +36,9 @@ export class FileRecordService {
       where: where,
       skip: (pageNumber - 1) * pageSize,
       take: pageSize,
+      order: {
+        id: 'DESC',
+      },
     });
 
     return {
@@ -54,6 +59,19 @@ export class FileRecordService {
     }
 
     return fileEntity;
+  }
+
+  /**
+   * 通过文件属性查找文件记录信息
+   */
+  async detailByProp(detailByPropDto: DetailByPropDto): Promise<FileEntity> {
+    const { startHash, endHash, size } = detailByPropDto;
+
+    return await this.fileEntityRepository.findOneBy({
+      startHash,
+      endHash,
+      size,
+    });
   }
 
   /**

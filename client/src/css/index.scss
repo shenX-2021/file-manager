@@ -18,12 +18,6 @@
 	background: transparent;
 }
 
-#app {
-	height: 100vh;
-	width: 100vw;
-	overflow: hidden;
-}
-
 a {
 	text-decoration: none;
 }
@@ -35,7 +29,7 @@ button {
 
 input {
 	&:-webkit-autofill {
-		box-shadow: 0 0 0px 1000px white inset;
+		box-shadow: 0 0 0 1000px white inset;
 	}
 }
 a:-webkit-any-link {

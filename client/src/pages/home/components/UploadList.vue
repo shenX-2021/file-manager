@@ -1,14 +1,10 @@
 <template>
-  <el-card header="文件列表" shadow="never" body-style="padding: 6px;">
-    <div v-if="listState.list.length === 0" class="flexCenter w100per h100">
-      当前没有文件
-    </div>
-    <el-form v-else>
+  <el-card header="正在上传的文件" shadow="never" body-style="padding: 6px;">
+    <el-form>
       <el-card
-        class="mb10 ml4 mr4"
-        v-for="(item, idx) in listState.list"
-        :key="idx"
-        v-loading="listState.loadingList[idx]"
+        class="mb10 ml10 mr10"
+        v-for="(item, idx) in uploadState.list"
+        :key="item.fileHash"
       >
         <el-row>
           <el-col :span="20">
@@ -40,29 +36,34 @@
                   {{ item.size }}
                 </el-form-item>
               </el-col>
+              <el-col
+                v-if="item.status === FileStatusEnum.CHUNK_UPLOADING"
+                :span="6"
+              >
+                <el-form-item label="上传进度">
+                  {{ item.uploadedCount || 0 }}/{{ item.chunkCount || 0 }}
+                </el-form-item>
+              </el-col>
             </el-row>
           </el-col>
 
           <el-col :span="4">
             <el-row
+              v-if="item.uploadStatus === UploadStatusEnum.UPLOADING"
               justify="end"
-              v-if="item.status === FileStatusEnum.FINISHED"
+              class="mt10"
             >
-              <el-button type="primary" @click="check(item, idx)">
-                {{
-                  item.checkStatus === FileCheckStatusEnum.UNCHECKED
-                    ? '校验文件'
-                    : '重新校验'
-                }}
+              <el-button type="warning" @click="handlePause(item)">
+                暂停上传
               </el-button>
             </el-row>
             <el-row
+              v-else-if="item.uploadStatus === UploadStatusEnum.PAUSE"
               justify="end"
               class="mt10"
-              v-if="item.status === FileStatusEnum.FINISHED"
             >
-              <el-button type="info" @click="downloadFile(item)">
-                下载
+              <el-button type="primary" @click="handleResume">
+                恢复上传
               </el-button>
             </el-row>
             <el-row justify="end" class="mt10">
@@ -78,54 +79,25 @@
 </template>
 
 <script setup lang="ts">
-import { useList } from '@src/pages/home/composables';
 import FileStatus from './FileStatus.vue';
 import FileCheckStatus from './FileCheckStatus.vue';
-import { checkFileApi, deleteFileApi, FileRecordData } from '@src/http/apis';
+import { deleteFileApi, FileRecordData } from '@src/http/apis';
 import { ElMessage } from 'element-plus/es';
-import { FileCheckStatusEnum, FileStatusEnum } from '@src/enums';
-import { download } from '@src/utils';
+import { FileStatusEnum, UploadStatusEnum } from '@src/enums';
+import { useUpload } from '@src/pages/home/composables';
 
-const { listState, getList } = useList();
-
-// 校验文件
-async function check(fileRecordData: FileRecordData, idx: number) {
-  listState.loadingList[idx] = true;
-  try {
-    const res = await checkFileApi(fileRecordData.id);
-
-    fileRecordData.checkStatus = res.checkStatus;
-    ElMessage({
-      message: '校验文件成功',
-      type: 'success',
-    });
-  } finally {
-    listState.loadingList[idx] = false;
-  }
-}
-
-// 下载文件
-async function downloadFile(fileRecordData: FileRecordData) {
-  await download(fileRecordData.id, fileRecordData.filename);
-}
+const { uploadState, handlePause, handleResume } = useUpload();
 
 // 删除文件记录
 async function del(fileRecordData: FileRecordData, idx: number) {
-  listState.loadingList[idx] = true;
   await deleteFileApi(fileRecordData.id);
 
   ElMessage({
     message: '删除文件成功',
     type: 'success',
   });
-  listState.loadingList.splice(idx, 1);
-  listState.list.splice(idx, 1);
+  uploadState.list.splice(idx, 1);
 }
-
-async function onCreated() {
-  await getList();
-}
-onCreated();
 </script>
 
 <style lang="scss" scoped></style>

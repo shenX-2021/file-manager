@@ -66,6 +66,7 @@ export class FileService {
       return {
         code: 0,
         data: {
+          id: fileEntity.id,
           needUpload: false,
         },
       };
@@ -82,6 +83,7 @@ export class FileService {
         return {
           code: 0,
           data: {
+            id: fileEntity.id,
             needUpload: false,
           },
         };
@@ -133,6 +135,7 @@ export class FileService {
     return {
       code: 0,
       data: {
+        id: fileEntity.id,
         needUpload: true,
         uploadedList,
       },

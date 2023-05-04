@@ -1,7 +1,9 @@
 interface WithoutUploadData {
+  id: number;
   needUpload: false;
 }
 interface NeedUploadData {
+  id: number;
   needUpload: true;
   uploadedList: string[];
 }

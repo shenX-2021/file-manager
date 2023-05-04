@@ -8,7 +8,7 @@ import {
   Patch,
   Query,
 } from '@nestjs/common';
-import { ChangeFilenameDto, ListDto } from '../dtos';
+import { ChangeFilenameDto, DetailByPropDto, ListDto } from '../dtos';
 import { FileRecordService } from '../service/file-record.service';
 
 @Controller('file/record')
@@ -24,9 +24,17 @@ export class FileRecordController {
   }
 
   /**
+   * 通过文件属性查找文件记录信息
+   */
+  @Get('detail/by-prop')
+  detailByProp(@Query() detailByPropDto: DetailByPropDto) {
+    return this.fileRecordService.detailByProp(detailByPropDto);
+  }
+
+  /**
    * 通过id查找文件记录信息
    */
-  @Get(':id')
+  @Get('detail/:id')
   detail(@Param('id', ParseIntPipe) id: number) {
     return this.fileRecordService.detail(id);
   }
