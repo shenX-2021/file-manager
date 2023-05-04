@@ -26,17 +26,12 @@ import UploadList from '@src/pages/home/components/UploadList.vue';
 
 const { uploadState, handleUpload, initUploadState } = useUpload();
 
-function transformByte(val: number) {
-  return Number((val / 1024).toFixed(0));
-}
-
 // 上传的文件改动
 function handleFileChange(e: any) {
   const [file] = e.target.files;
   if (!file) return;
   initUploadState();
-  uploadState.container.file = file;
-  handleUpload();
+  handleUpload(file);
 }
 </script>
 

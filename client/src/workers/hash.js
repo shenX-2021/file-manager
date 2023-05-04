@@ -1,4 +1,4 @@
-self.importScripts('./spark-md5.min.js');
+import './spark-md5.min.js';
 
 // 生成文件 hash
 self.onmessage = (e) => {

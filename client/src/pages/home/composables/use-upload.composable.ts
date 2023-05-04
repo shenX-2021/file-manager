@@ -11,6 +11,7 @@ import { FileConfigEnum, UploadStatusEnum } from '@src/enums';
 import pLimit from 'p-limit';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { useList } from '@src/pages/home/composables/use-list.composable';
+import HashWorker from '@src/workers/hash.js?worker';
 
 const { getList } = useList();
 
@@ -36,24 +37,12 @@ interface FileChunkItem {
 
 const uploadState = reactive<{
   list: ListItem[];
-  container: {
-    file?: File;
-    hash?: string;
-    worker?: Worker;
-    startHash?: string;
-    endHash?: string;
-  };
   status: UploadStatusEnum;
   fileChunkList: FileChunkItem[];
   hashPercentage: number;
   uploadDisabled: boolean;
 }>({
   list: [],
-  container: {
-    file: undefined,
-    hash: '',
-    worker: undefined,
-  },
   status: UploadStatusEnum.WAIT,
   fileChunkList: [],
   hashPercentage: 0,
@@ -61,27 +50,31 @@ const uploadState = reactive<{
 });
 
 function initUploadState() {
-  uploadState.container = {
-    file: undefined,
-    hash: '',
-    worker: undefined,
-  };
   uploadState.hashPercentage = 0;
   uploadState.status = UploadStatusEnum.WAIT;
 }
 // 上传文件请求处理
-async function handleUpload() {
-  if (!uploadState.container.file) return;
+async function handleUpload(file: File) {
   uploadState.uploadDisabled = true;
   uploadState.status = UploadStatusEnum.UPLOADING;
-  const fileChunkList = createFileChunk(uploadState.container.file);
-  uploadState.container.hash = await calculateHash(fileChunkList);
+  const fileChunkList = createFileChunk(file);
+  const { startHash, endHash, fileHash } = await calculateHash(
+    file,
+    fileChunkList,
+  );
   uploadState.fileChunkList = fileChunkList;
 
-  const { uploadedList, fileRecordId } = await verifyFile();
+  const { uploadedList, fileRecordId } = await verifyFile(
+    file.name,
+    fileHash,
+    startHash,
+    endHash,
+    file.size,
+  );
 
   if (uploadedList && fileRecordId) {
     const uploadFileRecordData = await getUploadFileRecordData(
+      file,
       fileRecordId,
       uploadedList.length,
     );
@@ -107,14 +100,17 @@ async function handlePause(uploadFileRecordData: ListItem) {
 
   uploadFileRecordData.requestList.forEach((xhr) => xhr?.abort());
   uploadFileRecordData.requestList = [];
-  if (uploadState.container.worker) {
-    uploadState.container.worker.onmessage = null;
-  }
 }
 // 恢复上传
-async function handleResume() {
+async function handleResume(uploadFileRecordData: ListItem) {
   uploadState.status = UploadStatusEnum.UPLOADING;
-  const { uploadedList, fileRecordId } = await verifyFile();
+  const { uploadedList, fileRecordId } = await verifyFile(
+    uploadFileRecordData.filename,
+    uploadFileRecordData.fileHash,
+    uploadFileRecordData.startHash,
+    uploadFileRecordData.endHash,
+    uploadFileRecordData.size,
+  );
 
   if (uploadedList && fileRecordId) {
     const listItem = uploadState.list.find((item) => item.id === fileRecordId);
@@ -129,10 +125,7 @@ async function uploadChunks(
   uploadedList: string[],
   uploadFileRecordData: ListItem,
 ) {
-  if (!uploadState.container.file || !uploadState.container.hash) return;
   uploadFileRecordData.uploadStatus = UploadStatusEnum.UPLOADING;
-  const file = uploadState.container.file;
-  const fileHash = uploadState.container.hash;
   const limit = pLimit(6);
   const uploadList = uploadState.fileChunkList
     .filter((item) => !uploadedList.includes(item.index.toString()))
@@ -140,9 +133,9 @@ async function uploadChunks(
       const formData = new FormData();
       formData.append('chunk', item.chunk);
       formData.append('chunkIndex', item.index.toString());
-      formData.append('filename', file.name);
-      formData.append('fileHash', fileHash);
-      formData.append('size', file.size.toString());
+      formData.append('filename', uploadFileRecordData.filename);
+      formData.append('fileHash', uploadFileRecordData.fileHash);
+      formData.append('size', uploadFileRecordData.size.toString());
       return { formData, index: item.index };
     })
     .map(({ formData }) =>
@@ -156,16 +149,22 @@ async function uploadChunks(
     );
   await Promise.all(uploadList);
 
-  const { uploadedList: checkUploadedList } = await verifyFile();
+  const { uploadedList: checkUploadedList } = await verifyFile(
+    uploadFileRecordData.filename,
+    uploadFileRecordData.fileHash,
+    uploadFileRecordData.startHash,
+    uploadFileRecordData.endHash,
+    uploadFileRecordData.size,
+  );
   if (checkUploadedList?.length === uploadFileRecordData.chunkCount) {
     // 上传文件列表移除已上传成功的切片
     uploadState.list = uploadState.list.filter(
-      (item) => item.fileHash !== uploadState.container.hash,
+      (item) => item.fileHash !== uploadFileRecordData.fileHash,
     );
     // 合并切片请求
     await mergeChunkApi({
-      fileHash: uploadState.container.hash,
-      size: uploadState.container.file.size,
+      fileHash: uploadFileRecordData.fileHash,
+      size: uploadFileRecordData.size,
     });
 
     ElMessage({ message: '上传文件成功', type: 'success' });
@@ -177,21 +176,22 @@ async function uploadChunks(
 }
 
 // 验证文件信息
-async function verifyFile(): Promise<{
+async function verifyFile(
+  filename: string,
+  fileHash: string,
+  startHash: string,
+  endHash: string,
+  size: number,
+): Promise<{
   uploadedList?: string[];
   fileRecordId?: number;
 }> {
-  if (!uploadState.container.file || !uploadState.container.hash) return {};
-  if (!uploadState.container.startHash || !uploadState.container.endHash)
-    return {};
-  const filename = uploadState.container.file.name;
-
   let res = await verifyFileApi({
     filename: filename,
-    fileHash: uploadState.container.hash,
-    startHash: uploadState.container.startHash,
-    endHash: uploadState.container.endHash,
-    size: uploadState.container.file.size,
+    fileHash,
+    startHash,
+    endHash,
+    size,
   });
   if (res.code === 1) {
     const { originFileName, id } = res.data;
@@ -207,10 +207,10 @@ async function verifyFile(): Promise<{
 
     res = await verifyFileApi({
       filename,
-      fileHash: uploadState.container.hash,
-      startHash: uploadState.container.startHash,
-      endHash: uploadState.container.endHash,
-      size: uploadState.container.file.size,
+      fileHash,
+      startHash,
+      endHash,
+      size,
     });
 
     if (res.code === 1) {
@@ -267,17 +267,24 @@ function createFileChunk(
 // 文件大小低于此数值的直接计算hash值
 const CALCULATE_HASH_SIZE = 1 * 1024 * 1024;
 // 生成文件hash
-function calculateHash(fileChunkList: FileChunkItem[]): Promise<string> {
+function calculateHash(
+  file: File,
+  fileChunkList: FileChunkItem[],
+): Promise<{
+  fileHash: string;
+  startHash: string;
+  endHash: string;
+}> {
   return new Promise(async (resolve) => {
-    const file = uploadState.container.file;
     if (!file) return;
     // 计算startHash和endHash
     const length =
       FileConfigEnum.SIZE >= file.size ? file.size : FileConfigEnum.SIZE;
-    const startHash = await calculateBlobHash(file.slice(0, length));
-    const endHash = await calculateBlobHash(file.slice(-length));
-    uploadState.container.startHash = startHash;
-    uploadState.container.endHash = endHash;
+
+    const [startHash, endHash] = await Promise.all([
+      getChunkHash(file.slice(0, length)),
+      getChunkHash(file.slice(-length)),
+    ]);
 
     if (file.size > CALCULATE_HASH_SIZE) {
       // 大于指定值，先查找服务器有没有匹配的文件
@@ -289,43 +296,58 @@ function calculateHash(fileChunkList: FileChunkItem[]): Promise<string> {
       // 存在文件记录，则直接返回hash值
       if (fileRecordData) {
         uploadState.hashPercentage = 100;
-        resolve(fileRecordData.fileHash);
+        resolve({
+          fileHash: fileRecordData.fileHash,
+          startHash,
+          endHash,
+        });
         return;
       }
     }
 
     // 计算整个文件的hash值
-    uploadState.container.worker = new Worker('./hash.js');
-    uploadState.container.worker.postMessage({
+    const worker = new HashWorker();
+    worker.postMessage({
       fileChunkList: fileChunkList.map((item) => item.chunk),
     });
-    uploadState.container.worker.onmessage = (e) => {
+    worker.onmessage = (e) => {
       const { percentage, hash } = e.data;
 
       uploadState.hashPercentage = percentage;
       if (hash) {
-        resolve(hash);
-      } else {
-        // TODO: 计算hash失败的处理
+        resolve({
+          fileHash: hash,
+          startHash,
+          endHash,
+        });
+        worker.terminate();
       }
     };
   });
 }
+// 获取切片的的hash值
+function getChunkHash(chunk: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    // 计算整个文件的hash值
+    const worker = new HashWorker();
+    const timer = setTimeout(() => {
+      worker.terminate();
+      ElMessage({
+        message: '计算文件切片的hash值失败',
+        type: 'error',
+      });
+      reject(new Error('计算文件切片的hash值超时'));
+    }, 5000);
+    worker.postMessage({
+      fileChunkList: [chunk],
+    });
+    worker.onmessage = (e) => {
+      const { hash } = e.data;
 
-// 计算Blob切片的hash值
-function calculateBlobHash(blob: Blob): Promise<string> {
-  return new Promise((resolve) => {
-    const spark = new SparkMD5.ArrayBuffer();
-
-    const reader = new FileReader();
-    reader.readAsArrayBuffer(blob);
-
-    reader.onload = (e: ProgressEvent<FileReader>) => {
-      if (e.target?.result) {
-        spark.append(e.target.result);
-        resolve(spark.end());
-      } else {
-        throw new Error('切片数据不存在');
+      if (hash) {
+        resolve(hash);
+        clearTimeout(timer);
+        worker.terminate();
       }
     };
   });
@@ -368,10 +390,10 @@ function uploadRequest({ url, data, requestList }: RequestOpts): any {
 
 // 获取文件详情信息
 async function getUploadFileRecordData(
+  file: File,
   fileRecordId: number,
   uploadedCount: number,
 ): Promise<Ref<ListItem> | undefined> {
-  if (!uploadState.container.file) return;
   const fileRecordData = await fileRecordDetailApi(fileRecordId);
   if (!fileRecordData) {
     ElMessage({
@@ -384,9 +406,7 @@ async function getUploadFileRecordData(
   }
   return ref<ListItem>({
     ...fileRecordData,
-    chunkCount: Math.ceil(
-      uploadState.container.file?.size / FileConfigEnum.SIZE,
-    ),
+    chunkCount: Math.ceil(fileRecordData.size / FileConfigEnum.SIZE),
     uploadedCount,
     uploadStatus: UploadStatusEnum.UPLOADING,
     requestList: [],

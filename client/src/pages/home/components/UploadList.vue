@@ -62,7 +62,7 @@
               justify="end"
               class="mt10"
             >
-              <el-button type="primary" @click="handleResume">
+              <el-button type="primary" @click="handleResume(item)">
                 恢复上传
               </el-button>
             </el-row>
