@@ -85,6 +85,7 @@ import { checkFileApi, deleteFileApi, FileRecordData } from '@src/http/apis';
 import { ElMessage } from 'element-plus/es';
 import { FileCheckStatusEnum, FileStatusEnum } from '@src/enums';
 import { download } from '@src/utils';
+import { ElMessageBox } from 'element-plus';
 
 const { listState, getList } = useList();
 
@@ -95,10 +96,17 @@ async function check(fileRecordData: FileRecordData, idx: number) {
     const res = await checkFileApi(fileRecordData.id);
 
     fileRecordData.checkStatus = res.checkStatus;
-    ElMessage({
-      message: '校验文件成功',
-      type: 'success',
-    });
+    if (res.checkStatus === FileCheckStatusEnum.SUCCESSFUL) {
+      ElMessage({
+        message: '文件已通过校验',
+        type: 'success',
+      });
+    } else {
+      ElMessage({
+        message: '文件未通过校验',
+        type: 'error',
+      });
+    }
   } finally {
     listState.loadingList[idx] = false;
   }
@@ -111,15 +119,24 @@ async function downloadFile(fileRecordData: FileRecordData) {
 
 // 删除文件记录
 async function del(fileRecordData: FileRecordData, idx: number) {
-  listState.loadingList[idx] = true;
-  await deleteFileApi(fileRecordData.id);
+  try {
+    listState.loadingList[idx] = true;
+    await ElMessageBox.confirm(`是否删除文件【${fileRecordData.filename}】`, {
+      confirmButtonText: '确认',
+      cancelButtonText: '取消',
+    });
 
-  ElMessage({
-    message: '删除文件成功',
-    type: 'success',
-  });
-  listState.loadingList.splice(idx, 1);
-  listState.list.splice(idx, 1);
+    await deleteFileApi(fileRecordData.id);
+
+    ElMessage({
+      message: '删除文件成功',
+      type: 'success',
+    });
+    listState.loadingList.splice(idx, 1);
+    listState.list.splice(idx, 1);
+  } finally {
+    listState.loadingList[idx] = false;
+  }
 }
 
 async function onCreated() {

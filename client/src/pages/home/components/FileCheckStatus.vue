@@ -28,7 +28,7 @@ const fileStatusMap: Record<
   },
   [FileCheckStatusEnum.SUCCESSFUL]: {
     text: '已通过校验',
-    color: '#30424a',
+    color: '#67c23a',
   },
 };
 </script>
