@@ -1,18 +1,37 @@
 <template>
   <div class="home">
-    <div>
-      <input
-        type="file"
+    <div class="flexCenter w100vw mt10">
+      <el-upload
+        class="upload"
+        drag
+        :before-upload="handleFileChange"
         :disabled="uploadState.uploadDisabled"
-        multiple
-        @change="handleFileChange"
-      />
-    </div>
-    <div>
-      <div>
-        <div>calculate chunk hash</div>
-        <el-progress :percentage="uploadState.hashPercentage" />
-      </div>
+      >
+        <div
+          v-show="!uploadState.uploadDisabled"
+          class="el-upload__text w100per h100per flexCenter"
+        >
+          拖拽上传 或 <em>点击上传</em>
+        </div>
+
+        <el-progress
+          v-show="uploadState.uploadDisabled"
+          class="progress flexCenter w100per h100per"
+          :show-text="false"
+          :stroke-width="150"
+          :percentage="uploadState.hashPercentage"
+        />
+
+        <div
+          v-show="uploadState.uploadDisabled"
+          class="progress-text w100per h100per flexCenter"
+        >
+          <div>
+            <div class="fs26 pl4">{{ uploadState.hashPercentage }}%</div>
+            <div class="fs14 mt12">计算文件Hash中...</div>
+          </div>
+        </div>
+      </el-upload>
     </div>
     <upload-list v-show="uploadState.list.length > 0" class="mt10" />
     <record-list class="mt10" />
@@ -27,12 +46,47 @@ import UploadList from '@src/pages/home/components/UploadList.vue';
 const { uploadState, handleUpload, initUploadState } = useUpload();
 
 // 上传的文件改动
-function handleFileChange(e: any) {
-  const [file] = e.target.files;
+function handleFileChange(file: File) {
   if (!file) return;
   initUploadState();
   handleUpload(file);
+  return false;
 }
 </script>
 
-<style lang="scss"></style>
+<style lang="scss" scoped>
+.upload {
+  width: 90vw;
+  height: 150px;
+  position: relative;
+  font-size: 1vw;
+
+  :deep(.el-upload),
+  :deep(.el-upload-dragger) {
+    padding: 0;
+    height: 100%;
+    width: 100%;
+  }
+
+  .progress {
+    position: absolute;
+    top: 0;
+    left: 0;
+    cursor: progress;
+    user-select: none;
+
+    :deep(.el-progress-bar__outer),
+    :deep(.el-progress-bar__inner) {
+      border-radius: inherit;
+    }
+  }
+  .progress-text {
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 101;
+    color: var(--el-color-black);
+    cursor: progress;
+  }
+}
+</style>
