@@ -1,16 +1,7 @@
 <template>
   <template v-if="configStore.size === 'small'">
     <el-row justify="center">
-      <el-progress
-        type="circle"
-        :percentage="
-          Math.floor(
-            ((props.fileRecordData.uploadedCount || 0) /
-              (props.fileRecordData.chunkCount || 1)) *
-              100,
-          )
-        "
-      />
+      <el-progress type="circle" :percentage="percentage" />
     </el-row>
     <el-row justify="center" class="mt12">
       <el-col
@@ -48,16 +39,7 @@
   </template>
   <el-row v-else>
     <el-col :span="14">
-      <el-progress
-        type="circle"
-        :percentage="
-          Math.floor(
-            ((props.fileRecordData.uploadedCount || 0) /
-              (props.fileRecordData.chunkCount || 1)) *
-              100,
-          )
-        "
-      />
+      <el-progress type="circle" :percentage="percentage" />
     </el-col>
     <el-col :span="10">
       <el-row
@@ -94,11 +76,12 @@
 </template>
 
 <script setup lang="ts">
-import { UploadStatusEnum } from '@src/enums';
+import { FileStatusEnum, UploadStatusEnum } from '@src/enums';
 import { useConfigStore } from '@src/store';
 import { deleteFileApi } from '@src/http/apis';
 import { ListItem, useUpload } from '@src/pages/home/composables';
 import { ElMessage } from 'element-plus';
+import { computed } from 'vue';
 
 const props = defineProps<{
   fileRecordData: ListItem;
@@ -118,6 +101,19 @@ async function del() {
   });
   uploadState.list.splice(props.index, 1);
 }
+
+const percentage = computed<number>(() => {
+  if (props.fileRecordData.status !== FileStatusEnum.CHUNK_UPLOADING)
+    return 100;
+  const map = uploadState.uploadPercentageMap[props.fileRecordData.id];
+  if (!map) return 0;
+
+  const loaded =
+    Object.values(map).reduce((prev, cur) => {
+      return prev + cur;
+    }, 0) || 0;
+  return Math.floor((loaded / props.fileRecordData.size) * 100);
+});
 </script>
 
 <style scoped lang="scss"></style>

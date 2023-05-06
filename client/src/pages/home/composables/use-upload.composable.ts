@@ -16,18 +16,18 @@ import HashWorker from '@src/workers/hash.js?worker';
 const { getList } = useList();
 
 export interface ListItem extends FileRecordData {
-  uploadedCount: number;
   chunkCount: number;
   uploadStatus: UploadStatusEnum;
   requestList: XMLHttpRequest[];
+  fileChunkList: FileChunkItem[];
 }
 
 interface RequestOpts {
   url: string;
-  method?: string;
-  data?: any;
-  headers?: Record<string, string>;
-  requestList?: XMLHttpRequest[];
+  data: any;
+  requestList: XMLHttpRequest[];
+  onProgress: (e) => void;
+  onAbort: (e) => void;
 }
 
 interface FileChunkItem {
@@ -41,12 +41,14 @@ const uploadState = reactive<{
   fileChunkList: FileChunkItem[];
   hashPercentage: number;
   uploadDisabled: boolean;
+  uploadPercentageMap: Record<number, Record<number, number>>;
 }>({
   list: [],
   status: UploadStatusEnum.WAIT,
   fileChunkList: [],
   hashPercentage: 0,
   uploadDisabled: false,
+  uploadPercentageMap: {},
 });
 
 function initUploadState() {
@@ -74,11 +76,11 @@ async function handleUpload(file: File) {
 
   if (uploadedList && fileRecordId) {
     const uploadFileRecordData = await getUploadFileRecordData(
-      file,
       fileRecordId,
-      uploadedList.length,
+      fileChunkList,
     );
     if (uploadFileRecordData) {
+      uploadFileRecordData.value.fileChunkList = fileChunkList;
       const listItem = uploadState.list.find(
         (item) => item.id === uploadFileRecordData.value.id,
       );
@@ -127,8 +129,17 @@ async function uploadChunks(
 ) {
   uploadFileRecordData.uploadStatus = UploadStatusEnum.UPLOADING;
   const limit = pLimit(6);
-  const uploadList = uploadState.fileChunkList
-    .filter((item) => !uploadedList.includes(item.index.toString()))
+  uploadState.uploadPercentageMap[uploadFileRecordData.id] = {};
+  const percentageMap =
+    uploadState.uploadPercentageMap[uploadFileRecordData.id];
+  const uploadList = uploadFileRecordData.fileChunkList
+    .filter((item) => {
+      const isUploaded = uploadedList.includes(item.index.toString());
+      if (isUploaded) {
+        percentageMap[item.index] = FileConfigEnum.SIZE;
+      }
+      return !isUploaded;
+    })
     .map((item) => {
       const formData = new FormData();
       formData.append('chunk', item.chunk);
@@ -138,12 +149,16 @@ async function uploadChunks(
       formData.append('size', uploadFileRecordData.size.toString());
       return { formData, index: item.index };
     })
-    .map(({ formData }) =>
+    .map(({ formData, index }) =>
       limit(() =>
         uploadRequest({
           url: '/fm/api/file/upload',
           data: formData,
           requestList: uploadFileRecordData.requestList,
+          onProgress: createProgressHandler(percentageMap, index),
+          onAbort: createAbortHandler(percentageMap, index),
+        }).then(() => {
+          percentageMap[index] = FileConfigEnum.SIZE;
         }),
       ),
     );
@@ -157,6 +172,7 @@ async function uploadChunks(
     uploadFileRecordData.size,
   );
   if (checkUploadedList?.length === uploadFileRecordData.chunkCount) {
+    delete uploadState.uploadPercentageMap[uploadFileRecordData.id];
     // 上传文件列表移除已上传成功的切片
     uploadState.list = uploadState.list.filter(
       (item) => item.fileHash !== uploadFileRecordData.fileHash,
@@ -265,7 +281,7 @@ function createFileChunk(
 }
 
 // 文件大小低于此数值的直接计算hash值
-const CALCULATE_HASH_SIZE = 1 * 1024 * 1024;
+const CALCULATE_HASH_SIZE = 1024 * 1024;
 // 生成文件hash
 function calculateHash(
   file: File,
@@ -355,13 +371,21 @@ function getChunkHash(chunk: Blob): Promise<string> {
 }
 
 // 请求处理
-function uploadRequest({ url, data, requestList }: RequestOpts): any {
+function uploadRequest({
+  url,
+  data,
+  requestList,
+  onProgress,
+  onAbort,
+}: RequestOpts): any {
   return new Promise((resolve) => {
     const xhr = new XMLHttpRequest();
     xhr.open('post', url);
     xhr.ontimeout = () => {
       onError && onError('上传切片请求超时');
     };
+    xhr.onprogress = onProgress;
+    xhr.onabort = onAbort;
     xhr.send(data);
     xhr.onload = () => {
       // 将请求成功的 xhr 从列表中删除
@@ -371,12 +395,6 @@ function uploadRequest({ url, data, requestList }: RequestOpts): any {
       }
 
       if (xhr.status === 201) {
-        const fileRecord = uploadState.list.find(
-          (item) => item.fileHash === data.get('fileHash'),
-        );
-        if (fileRecord) {
-          fileRecord.uploadedCount++;
-        }
         resolve(1);
       } else if (xhr.status === 413) {
         onError && onError('大小超过了限制，请检查服务器的限制');
@@ -391,9 +409,8 @@ function uploadRequest({ url, data, requestList }: RequestOpts): any {
 
 // 获取文件详情信息
 async function getUploadFileRecordData(
-  file: File,
   fileRecordId: number,
-  uploadedCount: number,
+  fileChunkList: FileChunkItem[],
 ): Promise<Ref<ListItem> | undefined> {
   const fileRecordData = await fileRecordDetailApi(fileRecordId);
   if (!fileRecordData) {
@@ -409,19 +426,31 @@ async function getUploadFileRecordData(
     ...fileRecordData,
     loading: false,
     chunkCount: Math.ceil(fileRecordData.size / FileConfigEnum.SIZE),
-    uploadedCount,
     uploadStatus: UploadStatusEnum.UPLOADING,
     requestList: [],
+    fileChunkList,
   });
 }
 
-// 用闭包保存每个 chunk 的失败后的处理
+// 上传切片失败后的处理
 function onError(message: string) {
   ElMessage({
     type: 'error',
     message,
   });
   throw new Error('大小超过了限制，请检查服务器的限制');
+}
+
+function createProgressHandler(map: Record<number, number>, index: number) {
+  return (e) => {
+    console.log(e.loaded);
+    map[index] = e.loaded;
+  };
+}
+function createAbortHandler(map: Record<number, number>, index: number) {
+  return () => {
+    map[index] = 0;
+  };
 }
 
 export function useUpload() {
