@@ -40,3 +40,26 @@ declare namespace SparkMD5 {
     setState(state: State): State;
   }
 }
+
+declare interface FormItemBase {
+  label: string;
+  prop: string;
+  props?: Record<string, unknown>;
+}
+
+declare interface FormItemProp extends FormItemBase {
+  type: 'prop';
+}
+
+declare interface FormItemComponent extends FormItemBase {
+  type: 'component';
+  model: string;
+  component: string;
+}
+
+declare interface FormItemValue extends FormItemBase {
+  type: 'value';
+  getValue: (value) => unknown;
+}
+
+declare type FormItem = FormItemProp | FormItemComponent | FormItemValue;

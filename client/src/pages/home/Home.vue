@@ -1,6 +1,6 @@
 <template>
   <div class="home">
-    <div class="flexCenter w100vw mt10">
+    <div class="flexCenter mt10">
       <el-upload
         class="upload"
         drag
@@ -72,8 +72,6 @@ function handleFileChange(file: File) {
     position: absolute;
     top: 0;
     left: 0;
-    cursor: progress;
-    user-select: none;
 
     :deep(.el-progress-bar__outer),
     :deep(.el-progress-bar__inner) {
@@ -87,6 +85,7 @@ function handleFileChange(file: File) {
     z-index: 101;
     color: var(--el-color-black);
     cursor: progress;
+    user-select: none;
   }
 }
 </style>

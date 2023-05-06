@@ -5,7 +5,7 @@
     </div>
     <el-form v-else :size="configStore.size">
       <el-card
-        class="mb10 ml4 mr4"
+        class="mb10"
         v-for="(item, idx) in listState.list"
         :key="idx"
         v-loading="listState.loadingList[idx]"
@@ -89,29 +89,6 @@ import { computed, defineAsyncComponent } from 'vue';
 
 const { listState, getList } = useList();
 const configStore = useConfigStore();
-
-interface FormItemBase {
-  label: string;
-  prop: string;
-  props?: Record<string, unknown>;
-}
-
-interface FormItemProp extends FormItemBase {
-  type: 'prop';
-}
-
-interface FormItemComponent extends FormItemBase {
-  type: 'component';
-  model: string;
-  component: string;
-}
-
-interface FormItemValue extends FormItemBase {
-  type: 'value';
-  getValue: (value) => unknown;
-}
-
-type FormItem = FormItemProp | FormItemComponent | FormItemValue;
 
 // 校验文件
 async function check(fileRecordData: FileRecordData, idx: number) {
