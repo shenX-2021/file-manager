@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
   InternalServerErrorException,
   NotFoundException,
@@ -10,7 +11,7 @@ import * as fse from 'fs-extra';
 import * as path from 'path';
 import * as fsp from 'fs/promises';
 import checkDiskSpace from 'check-disk-space';
-import { VerifyRo } from '../ros';
+import { MergeChunkRo, VerifyRo } from '../ros';
 import * as pLimit from 'p-limit';
 import { InjectRepository } from '@nestjs/typeorm';
 import { FileEntity } from '../../../../entities';
@@ -18,9 +19,19 @@ import { Repository } from 'typeorm';
 import { FileCheckStatusEnum, FileStatusEnum } from '../../../../enums';
 import { UPLOAD_CHUNK_DIR, UPLOAD_FILE_DIR } from '../../../../config';
 
+interface MergeData {
+  fileHandle: fsp.FileHandle;
+  promiseHandle: Promise<number[]>;
+  finishedSet: Set<string>;
+  chunkCount: number;
+}
+
 @Injectable()
 export class FileService {
+  // 切片最大值
   static CHUNK_MAX_SIZE = 30 * 1024 * 1024;
+  // 文件合并数据映射
+  static MERGE_DATA_MAP: Record<number, MergeData> = {};
 
   constructor(
     @InjectRepository(FileEntity)
@@ -95,7 +106,7 @@ export class FileService {
       // do nothing
     }
     // 通过文件大小计算切片数量
-    const chunkCount = Math.ceil(size / FileService.CHUNK_MAX_SIZE);
+    const chunkCount = this.getChunkCount(size);
 
     // 检查目录下所有切片
     const chunkDir = this.getChunkDir(fileHash);
@@ -164,7 +175,7 @@ export class FileService {
     try {
       const chunkStat = await fse.stat(chunkPath);
 
-      const chunkCount = Math.ceil(size / FileService.CHUNK_MAX_SIZE);
+      const chunkCount = this.getChunkCount(size);
       if (
         chunkIndex === chunkCount - 1 ||
         chunkStat.size === FileService.CHUNK_MAX_SIZE
@@ -190,15 +201,12 @@ export class FileService {
   /**
    * 合并文件切片
    */
-  async mergeChunk(mergeChunkDto: MergeChunkDto): Promise<void> {
+  async mergeChunk(mergeChunkDto: MergeChunkDto): Promise<MergeChunkRo> {
     const { fileHash, size } = mergeChunkDto;
 
     const fileEntity = await this.fileEntityRepository.findOneBy({ fileHash });
     if (!fileEntity) {
       throw new BadRequestException('文件记录不存在，无法合并切片');
-    }
-    if (fileEntity.status !== FileStatusEnum.CHUNK_UPLOADED) {
-      throw new BadRequestException('文件记录的状态不正确');
     }
 
     if (!fileEntity.filePath) {
@@ -207,6 +215,40 @@ export class FileService {
 
     const filePath = fileEntity.filePath;
     const chunkDir = this.getChunkDir(fileHash);
+
+    if (fileEntity.status !== FileStatusEnum.CHUNK_UPLOADED) {
+      const mergeData = FileService.MERGE_DATA_MAP[fileEntity.id];
+      if (fileEntity.status === FileStatusEnum.CHUNK_MERGING && mergeData) {
+        const percentage =
+          Math.floor(mergeData.finishedSet.size / mergeData.chunkCount) * 100;
+
+        if (percentage === 100) {
+          const fileStat = await fse.stat(filePath).catch(() => {
+            throw new InternalServerErrorException('合并后的文件丢失');
+          });
+          if (fileStat.size !== size) {
+            throw new BadRequestException('合并后的文件大小不符合预期');
+          }
+          // 移除切片
+          await fse.remove(chunkDir);
+
+          // 关闭文件
+          await mergeData.fileHandle.close();
+          // 删除合并文件数据缓存
+          delete FileService.MERGE_DATA_MAP[fileEntity.id];
+
+          // 将文件状态改为已完成
+          fileEntity.status = FileStatusEnum.FINISHED;
+          await fileEntity.save();
+        }
+
+        return {
+          percentage,
+        };
+      }
+
+      throw new BadRequestException('文件记录的状态不正确');
+    }
 
     // 所需磁盘空间，为合并成功，留100M冗余。
     let needDiskSize = fileEntity.size + 100 * 1024 * 1024;
@@ -248,11 +290,15 @@ export class FileService {
     });
     const chunkList = await fse.readdir(chunkDir);
 
-    const fileHandle = await fsp.open(filePath, 'w');
+    const fileHandle: fsp.FileHandle = await fsp.open(filePath, 'w');
     const promises = chunkList.map((chunkName) => {
       return limit(
         () =>
-          new Promise(async (resolve, reject) => {
+          new Promise<number>(async (resolve, reject) => {
+            const mergeData = FileService.MERGE_DATA_MAP[fileEntity.id];
+            if (!mergeData) {
+              throw new Error(`文件【id: ${fileEntity.id}】的合并处理已取消`);
+            }
             // 直接读取文件到内存，会比stream流更快，但更占内存
             const chunk = await fse.readFile(path.join(chunkDir, chunkName), {
               flag: 'r',
@@ -268,37 +314,61 @@ export class FileService {
               )
               .catch((e) => reject(e));
 
+            mergeData.finishedSet.add(chunkName);
             resolve(index);
           }),
       );
     });
 
-    try {
-      await Promise.all(promises);
-    } catch (e) {
+    const promiseHandle = Promise.all(promises).catch(async (e) => {
       fileEntity.status = FileStatusEnum.CHUNK_UPLOADED;
       await fileEntity.save();
+
       if (e.message === 'ENOSPC: no space left on device, write') {
         throw new BadRequestException('磁盘空间不足，无法合并切片');
       }
-      throw e;
-    } finally {
-      await fileHandle.close();
-    }
-
-    try {
-      const fileStat = await fse.stat(filePath);
-      if (fileStat.size !== size) {
-        throw new BadRequestException('合并后的文件大小不符合预期');
+      if (e.message === 'file closed') {
+        throw new ConflictException('已取消合并切片的请求');
+      } else {
+        await fileHandle.close();
       }
-    } catch (e) {
-      throw new InternalServerErrorException('合并后的文件丢失');
-    }
-    // 移除切片
-    await fse.remove(chunkDir);
 
-    fileEntity.status = FileStatusEnum.FINISHED;
-    await fileEntity.save();
+      throw e;
+    });
+
+    FileService.MERGE_DATA_MAP[fileEntity.id] = {
+      fileHandle,
+      promiseHandle,
+      finishedSet: new Set<string>(),
+      chunkCount: this.getChunkCount(fileEntity.size),
+    };
+
+    return {
+      percentage: 0,
+    };
+  }
+
+  /**
+   * 取消合并切片
+   */
+  async cancelMerge(id: number): Promise<void> {
+    const fileEntity = await this.fileEntityRepository.findOneBy({ id });
+    if (!fileEntity) {
+      throw new BadRequestException('文件记录不存在，无法合并切片');
+    }
+
+    const mergeData = FileService.MERGE_DATA_MAP[id];
+    if (!mergeData) {
+      throw new BadRequestException(`文件【id: ${id}】当前没有合并切片`);
+    }
+
+    await mergeData.fileHandle.close();
+    delete FileService.MERGE_DATA_MAP[id];
+
+    if (fileEntity.status === FileStatusEnum.CHUNK_MERGING) {
+      fileEntity.status = FileStatusEnum.CHUNK_UPLOADED;
+      await fileEntity.save();
+    }
   }
 
   /**
@@ -336,5 +406,12 @@ export class FileService {
    */
   private getFilePath(fileHash: string): string {
     return path.join(UPLOAD_FILE_DIR, fileHash);
+  }
+
+  /**
+   * 获取切片总数
+   */
+  private getChunkCount(size: number) {
+    return Math.ceil(size / FileService.CHUNK_MAX_SIZE);
   }
 }

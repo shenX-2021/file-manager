@@ -4,6 +4,7 @@ import {
   Get,
   Param,
   ParseIntPipe,
+  Patch,
   Post,
   UploadedFile,
   UseInterceptors,
@@ -42,6 +43,14 @@ export class FileController {
   @Post('merge')
   mergeChunk(@Body() mergeChunkDto: MergeChunkDto) {
     return this.fileService.mergeChunk(mergeChunkDto);
+  }
+
+  /**
+   * 取消合并文件切片
+   */
+  @Patch('merge/cancel/:id')
+  cancelMerge(@Param('id', ParseIntPipe) id: number) {
+    return this.fileService.cancelMerge(id);
   }
 
   /**

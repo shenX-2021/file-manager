@@ -22,6 +22,7 @@ export interface FileRecordData {
   checkStatus: FileCheckStatusEnum;
   gmtCreated: number;
   gmtModified: number;
+  loading: boolean;
 }
 export interface FileRecordListRo {
   pageNumber: number;

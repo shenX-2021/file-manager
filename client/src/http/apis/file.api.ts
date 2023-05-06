@@ -34,12 +34,19 @@ export interface MergeChunkFormData {
   fileHash: string;
   size: number;
 }
+export interface MergeChunkRo {
+  percentage: number;
+}
 
 // 验证文件信息
 export function verifyFileApi(data: VerifyFileFormData): Promise<VerifyRo> {
   return axios.post('/file/verify', data);
 }
 // 合并文件
-export function mergeChunkApi(data: MergeChunkFormData) {
+export function mergeChunkApi(data: MergeChunkFormData): Promise<MergeChunkRo> {
   return axios.post('/file/merge', data);
+}
+// 取消合并文件
+export function cancelMergeChunkApi(id: number): Promise<void> {
+  return axios.patch(`/file/merge/cancel/${id}`, null, { timeout: 120_000 });
 }

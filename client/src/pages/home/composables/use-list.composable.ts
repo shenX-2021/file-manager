@@ -8,7 +8,6 @@ import {
 const listState = reactive<{
   formData: FileRecordListFormData;
   list: FileRecordData[];
-  loadingList: boolean[];
   total?: number;
 }>({
   formData: {
@@ -16,14 +15,15 @@ const listState = reactive<{
     pageNumber: 1,
   },
   list: [],
-  loadingList: [],
 });
 
 async function getList() {
   const res = await fileRecordListApi(listState.formData);
   listState.total = res.total;
-  listState.list = res.list;
-  listState.loadingList = res.list.map(() => false);
+  listState.list = res.list.map((item) => ({
+    ...item,
+    loading: false,
+  }));
 }
 
 export function useList() {

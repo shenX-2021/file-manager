@@ -295,6 +295,7 @@ function calculateHash(
       });
       // 存在文件记录，则直接返回hash值
       if (fileRecordData) {
+        fileRecordData.loading = false;
         uploadState.hashPercentage = 100;
         resolve({
           fileHash: fileRecordData.fileHash,
@@ -406,6 +407,7 @@ async function getUploadFileRecordData(
   }
   return ref<ListItem>({
     ...fileRecordData,
+    loading: false,
     chunkCount: Math.ceil(fileRecordData.size / FileConfigEnum.SIZE),
     uploadedCount,
     uploadStatus: UploadStatusEnum.UPLOADING,

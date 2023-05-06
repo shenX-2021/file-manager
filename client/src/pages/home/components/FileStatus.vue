@@ -5,17 +5,31 @@
     :color="fileStatusMap[props.status].color"
   >
     {{ fileStatusMap[props.status].text }}
+    <span v-if="props.status === FileStatusEnum.CHUNK_MERGING"
+      >{{ state.percentage }}%</span
+    >
   </el-tag>
 </template>
 
 <script setup lang="ts">
 import { FileStatusEnum } from '@src/enums';
 import { useConfigStore } from '@src/store';
+import { reactive, watch } from 'vue';
+import { mergeChunkApi } from '@src/http/apis';
 
 const configStore = useConfigStore();
 
+const state = reactive({
+  percentage: 0,
+});
+
 const props = defineProps<{
   status: FileStatusEnum;
+  fileHash: string;
+  size: number;
+}>();
+const emit = defineEmits<{
+  (e: 'after-merge'): void;
 }>();
 
 const fileStatusMap: Record<FileStatusEnum, { text: string; color: string }> = {
@@ -40,6 +54,29 @@ const fileStatusMap: Record<FileStatusEnum, { text: string; color: string }> = {
     color: '#67c23a',
   },
 };
+let timer;
+watch(
+  () => props.status,
+  (newVal) => {
+    if (newVal === FileStatusEnum.CHUNK_MERGING) {
+      clearTimeout(timer);
+      timer = setTimeout(async function checkMergePercentage() {
+        const res = await mergeChunkApi({
+          fileHash: props.fileHash,
+          size: props.size,
+        });
+        state.percentage = res.percentage;
+        if (state.percentage !== 100) {
+          timer = setTimeout(checkMergePercentage, 1000);
+        } else {
+          emit('after-merge');
+        }
+      }, 500);
+    } else {
+      clearTimeout(timer);
+    }
+  },
+);
 </script>
 
 <style lang="scss" scoped>

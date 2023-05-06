@@ -8,18 +8,27 @@
         class="mb10"
         v-for="(item, idx) in listState.list"
         :key="idx"
-        v-loading="listState.loadingList[idx]"
+        v-loading="listState.list[idx].loading"
       >
         <el-row>
           <el-col :span="17">
             <el-row v-for="(cols, rowIdx) in rows" :key="rowIdx">
               <el-col v-for="(col, colIdx) in cols" :key="colIdx" :span="span">
                 <el-form-item :label="col.label">
-                  <component
-                    v-if="col.type === 'component'"
-                    :[col.model]="item[col.prop]"
-                    :is="col.component"
-                  />
+                  <template v-if="col.type === 'component'">
+                    <file-status
+                      v-if="col.prop === 'status'"
+                      :status="item[col.prop]"
+                      :file-hash="item.fileHash"
+                      :size="item.size"
+                      @after-merge="update(item)"
+                    />
+                    <component
+                      v-else
+                      :is="col.component"
+                      :[col.model]="item[col.prop]"
+                    />
+                  </template>
                   <span v-else-if="col.type === 'value'" v-bind="col.props">
                     {{ col.getValue(item[col.prop]) }}
                   </span>
@@ -46,6 +55,32 @@
                     ? '校验文件'
                     : '重新校验'
                 }}
+              </el-button>
+            </el-row>
+            <el-row
+              justify="end"
+              class="mt10"
+              v-if="item.status === FileStatusEnum.CHUNK_UPLOADED"
+            >
+              <el-button
+                type="primary"
+                :size="configStore.size"
+                @click="mergeChunk(item)"
+              >
+                合并切片
+              </el-button>
+            </el-row>
+            <el-row
+              justify="end"
+              class="mt10"
+              v-if="item.status === FileStatusEnum.CHUNK_MERGING"
+            >
+              <el-button
+                type="danger"
+                :size="configStore.size"
+                @click="cancelMergeChunk(item)"
+              >
+                取消合并
               </el-button>
             </el-row>
             <el-row
@@ -79,20 +114,28 @@
 
 <script setup lang="ts">
 import { useList } from '@src/pages/home/composables';
-import { checkFileApi, deleteFileApi, FileRecordData } from '@src/http/apis';
+import {
+  cancelMergeChunkApi,
+  checkFileApi,
+  deleteFileApi,
+  FileRecordData,
+  fileRecordDetailApi,
+  mergeChunkApi,
+} from '@src/http/apis';
 import { ElMessage } from 'element-plus/es';
 import { FileCheckStatusEnum, FileStatusEnum } from '@src/enums';
 import { download, transformByte } from '@src/utils';
 import { ElMessageBox } from 'element-plus';
 import { useConfigStore } from '@src/store';
 import { computed, defineAsyncComponent } from 'vue';
+import FileStatus from '@src/pages/home/components/FileStatus.vue';
 
 const { listState, getList } = useList();
 const configStore = useConfigStore();
 
 // 校验文件
 async function check(fileRecordData: FileRecordData, idx: number) {
-  listState.loadingList[idx] = true;
+  listState.list[idx].loading = true;
   try {
     const res = await checkFileApi(fileRecordData.id);
 
@@ -109,7 +152,7 @@ async function check(fileRecordData: FileRecordData, idx: number) {
       });
     }
   } finally {
-    listState.loadingList[idx] = false;
+    listState.list[idx].loading = false;
   }
 }
 
@@ -121,7 +164,7 @@ async function downloadFile(fileRecordData: FileRecordData) {
 // 删除文件记录
 async function del(fileRecordData: FileRecordData, idx: number) {
   try {
-    listState.loadingList[idx] = true;
+    listState.list[idx].loading = true;
     await ElMessageBox.confirm(`是否删除文件【${fileRecordData.filename}】`, {
       confirmButtonText: '确认',
       cancelButtonText: '取消',
@@ -133,11 +176,51 @@ async function del(fileRecordData: FileRecordData, idx: number) {
       message: '删除文件成功',
       type: 'success',
     });
-    listState.loadingList.splice(idx, 1);
     listState.list.splice(idx, 1);
   } finally {
-    listState.loadingList[idx] = false;
+    listState.list[idx].loading = false;
   }
+}
+
+// 更新文件记录
+async function update(fileRecordData: FileRecordData) {
+  const newFileRecordData = await fileRecordDetailApi(fileRecordData.id);
+  // 数据库的记录不存在
+  if (!newFileRecordData) {
+    ElMessage({
+      message: `文件【${fileRecordData.filename}】已被移除`,
+      type: 'error',
+    });
+    const index = listState.list.findIndex(
+      (item) => (item.id = fileRecordData.id),
+    );
+    if (index !== -1) {
+      listState.list.splice(index, 1);
+    }
+    return;
+  }
+  newFileRecordData.loading = false;
+
+  Object.assign(fileRecordData, newFileRecordData);
+}
+
+// 合并切片
+async function mergeChunk(fileRecordData: FileRecordData) {
+  // 合并切片请求
+  await mergeChunkApi({
+    fileHash: fileRecordData.fileHash,
+    size: fileRecordData.size,
+  });
+
+  fileRecordData.status = FileStatusEnum.CHUNK_MERGING;
+}
+
+// 取消合并切片
+async function cancelMergeChunk(fileRecordData: FileRecordData) {
+  // 合并切片请求
+  await cancelMergeChunkApi(fileRecordData.id);
+
+  fileRecordData.status = FileStatusEnum.CHUNK_UPLOADED;
 }
 
 const formItemList: FormItem[] = [
