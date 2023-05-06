@@ -147,9 +147,9 @@ async function uploadChunks(
       formData.append('filename', uploadFileRecordData.filename);
       formData.append('fileHash', uploadFileRecordData.fileHash);
       formData.append('size', uploadFileRecordData.size.toString());
-      return { formData, index: item.index };
+      return { formData, index: item.index, size: item.chunk.size };
     })
-    .map(({ formData, index }) =>
+    .map(({ formData, index, size }) =>
       limit(() =>
         uploadRequest({
           url: '/fm/api/file/upload',
@@ -158,7 +158,7 @@ async function uploadChunks(
           onProgress: createProgressHandler(percentageMap, index),
           onAbort: createAbortHandler(percentageMap, index),
         }).then(() => {
-          percentageMap[index] = FileConfigEnum.SIZE;
+          percentageMap[index] = size;
         }),
       ),
     );
@@ -380,13 +380,11 @@ function uploadRequest({
 }: RequestOpts): any {
   return new Promise((resolve) => {
     const xhr = new XMLHttpRequest();
-    xhr.open('post', url);
     xhr.ontimeout = () => {
       onError && onError('上传切片请求超时');
     };
-    xhr.onprogress = onProgress;
+    xhr.upload.onprogress = onProgress;
     xhr.onabort = onAbort;
-    xhr.send(data);
     xhr.onload = () => {
       // 将请求成功的 xhr 从列表中删除
       if (requestList) {
@@ -402,6 +400,8 @@ function uploadRequest({
         onError && onError('未知错误，上传失败');
       }
     };
+    xhr.open('post', url);
+    xhr.send(data);
     // 暴露当前 xhr 给外部
     requestList?.push(xhr);
   });
@@ -443,7 +443,6 @@ function onError(message: string) {
 
 function createProgressHandler(map: Record<number, number>, index: number) {
   return (e) => {
-    console.log(e.loaded);
     map[index] = e.loaded;
   };
 }
