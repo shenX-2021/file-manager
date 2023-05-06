@@ -1,11 +1,18 @@
 <template>
-  <el-tag class="file-status" :color="fileStatusMap[props.status].color">
+  <el-tag
+    class="file-status"
+    :size="configStore.size"
+    :color="fileStatusMap[props.status].color"
+  >
     {{ fileStatusMap[props.status].text }}
   </el-tag>
 </template>
 
 <script setup lang="ts">
 import { FileStatusEnum } from '@src/enums';
+import { useConfigStore } from '@src/store';
+
+const configStore = useConfigStore();
 
 const props = defineProps<{
   status: FileStatusEnum;

@@ -12,7 +12,7 @@ const listState = reactive<{
   total?: number;
 }>({
   formData: {
-    pageSize: 10,
+    pageSize: 9999,
     pageNumber: 1,
   },
   list: [],

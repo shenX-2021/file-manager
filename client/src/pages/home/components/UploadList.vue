@@ -1,6 +1,6 @@
 <template>
   <el-card header="正在上传的文件" shadow="never" body-style="padding: 6px;">
-    <el-form>
+    <el-form :size="configStore.size">
       <el-card
         class="mb10 ml10 mr10"
         v-for="(item, idx) in uploadState.list"
@@ -53,7 +53,11 @@
               justify="end"
               class="mt10"
             >
-              <el-button type="warning" @click="handlePause(item)">
+              <el-button
+                type="warning"
+                :size="configStore.size"
+                @click="handlePause(item)"
+              >
                 暂停上传
               </el-button>
             </el-row>
@@ -62,12 +66,20 @@
               justify="end"
               class="mt10"
             >
-              <el-button type="primary" @click="handleResume(item)">
+              <el-button
+                type="primary"
+                :size="configStore.size"
+                @click="handleResume(item)"
+              >
                 恢复上传
               </el-button>
             </el-row>
             <el-row justify="end" class="mt10">
-              <el-button type="danger" @click="del(item, idx)">
+              <el-button
+                type="danger"
+                :size="configStore.size"
+                @click="del(item, idx)"
+              >
                 删除
               </el-button>
             </el-row>
@@ -85,8 +97,10 @@ import { deleteFileApi, FileRecordData } from '@src/http/apis';
 import { ElMessage } from 'element-plus/es';
 import { FileStatusEnum, UploadStatusEnum } from '@src/enums';
 import { useUpload } from '@src/pages/home/composables';
+import { useConfigStore } from '@src/store';
 
 const { uploadState, handlePause, handleResume } = useUpload();
+const configStore = useConfigStore();
 
 // 删除文件记录
 async function del(fileRecordData: FileRecordData, idx: number) {

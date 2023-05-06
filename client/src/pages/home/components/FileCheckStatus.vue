@@ -2,6 +2,7 @@
   <el-tag
     class="file-check-status"
     :color="fileStatusMap[props.checkStatus].color"
+    :size="configStore.size"
   >
     {{ fileStatusMap[props.checkStatus].text }}
   </el-tag>
@@ -9,6 +10,9 @@
 
 <script setup lang="ts">
 import { FileCheckStatusEnum } from '@src/enums';
+import { useConfigStore } from '@src/store';
+
+const configStore = useConfigStore();
 
 const props = defineProps<{
   checkStatus: FileCheckStatusEnum;

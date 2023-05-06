@@ -6,5 +6,6 @@ import '@src/css/index.scss';
 import '@src/css/global.scss';
 import App from './App.vue';
 import { router } from '@src/router';
+import { createPinia } from 'pinia';
 
-createApp(App).use(router).mount('#app');
+createApp(App).use(createPinia()).use(router).mount('#app');

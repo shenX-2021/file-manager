@@ -88,3 +88,10 @@
 .h100per {
   height: 100%;
 }
+
+.singe-line-ellipsis {
+  text-overflow: ellipsis;
+  overflow: hidden;
+  word-break: break-all;
+  white-space: nowrap;
+}

@@ -35,3 +35,32 @@ export function download(id: number, filename: string) {
     pump();
   });
 }
+
+/**
+ * 防抖函数处理
+ */
+export function debounce(fn: (...args) => void, timestamp = 300) {
+  let timer;
+
+  return (...args) => {
+    clearTimeout(timer);
+
+    timer = setTimeout(() => {
+      fn(...args);
+    }, timestamp);
+  };
+}
+
+/**
+ * 体积大小转换
+ */
+const sizeUnitList = ['B', 'KB', 'MB', 'GB', 'TB', 'PB'];
+export function transformByte(byte: number): string {
+  let index = 0;
+  while (byte > 1024) {
+    byte /= 1024;
+    index++;
+  }
+
+  return byte.toFixed(2).replace(/\.0{1,2}$/, '') + ' ' + sizeUnitList[index];
+}

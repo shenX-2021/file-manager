@@ -3,7 +3,7 @@
     <div v-if="listState.list.length === 0" class="flexCenter w100per h100">
       当前没有文件
     </div>
-    <el-form v-else>
+    <el-form v-else :size="configStore.size">
       <el-card
         class="mb10 ml4 mr4"
         v-for="(item, idx) in listState.list"
@@ -11,44 +11,36 @@
         v-loading="listState.loadingList[idx]"
       >
         <el-row>
-          <el-col :span="20">
-            <el-row>
-              <el-col :span="6">
-                <el-form-item label="名称">
-                  {{ item.filename }}
-                </el-form-item>
-              </el-col>
-              <el-col :span="6">
-                <el-form-item label="上传状态">
-                  <file-status :status="item.status" />
-                </el-form-item>
-              </el-col>
-              <el-col :span="6">
-                <el-form-item label="校验状态">
-                  <file-check-status :check-status="item.checkStatus" />
-                </el-form-item>
-              </el-col>
-              <el-col :span="6">
-                <el-form-item label="创建时间">
-                  {{ new Date(item.gmtCreated).toLocaleString() }}
-                </el-form-item>
-              </el-col>
-            </el-row>
-            <el-row>
-              <el-col :span="6">
-                <el-form-item label="文件大小">
-                  {{ item.size }}
+          <el-col :span="17">
+            <el-row v-for="(cols, rowIdx) in rows" :key="rowIdx">
+              <el-col v-for="(col, colIdx) in cols" :key="colIdx" :span="span">
+                <el-form-item :label="col.label">
+                  <component
+                    v-if="col.type === 'component'"
+                    :[col.model]="item[col.prop]"
+                    :is="col.component"
+                  />
+                  <span v-else-if="col.type === 'value'" v-bind="col.props">
+                    {{ col.getValue(item[col.prop]) }}
+                  </span>
+                  <span v-else-if="col.type === 'prop'" v-bind="col.props">
+                    {{ item[col.prop] }}
+                  </span>
                 </el-form-item>
               </el-col>
             </el-row>
           </el-col>
 
-          <el-col :span="4">
+          <el-col :span="7">
             <el-row
               justify="end"
               v-if="item.status === FileStatusEnum.FINISHED"
             >
-              <el-button type="primary" @click="check(item, idx)">
+              <el-button
+                type="primary"
+                :size="configStore.size"
+                @click="check(item, idx)"
+              >
                 {{
                   item.checkStatus === FileCheckStatusEnum.UNCHECKED
                     ? '校验文件'
@@ -61,12 +53,20 @@
               class="mt10"
               v-if="item.status === FileStatusEnum.FINISHED"
             >
-              <el-button type="info" @click="downloadFile(item)">
+              <el-button
+                type="info"
+                :size="configStore.size"
+                @click="downloadFile(item)"
+              >
                 下载
               </el-button>
             </el-row>
             <el-row justify="end" class="mt10">
-              <el-button type="danger" @click="del(item, idx)">
+              <el-button
+                type="danger"
+                :size="configStore.size"
+                @click="del(item, idx)"
+              >
                 删除
               </el-button>
             </el-row>
@@ -79,15 +79,39 @@
 
 <script setup lang="ts">
 import { useList } from '@src/pages/home/composables';
-import FileStatus from './FileStatus.vue';
-import FileCheckStatus from './FileCheckStatus.vue';
 import { checkFileApi, deleteFileApi, FileRecordData } from '@src/http/apis';
 import { ElMessage } from 'element-plus/es';
 import { FileCheckStatusEnum, FileStatusEnum } from '@src/enums';
-import { download } from '@src/utils';
+import { download, transformByte } from '@src/utils';
 import { ElMessageBox } from 'element-plus';
+import { useConfigStore } from '@src/store';
+import { computed, defineAsyncComponent } from 'vue';
 
 const { listState, getList } = useList();
+const configStore = useConfigStore();
+
+interface FormItemBase {
+  label: string;
+  prop: string;
+  props?: Record<string, unknown>;
+}
+
+interface FormItemProp extends FormItemBase {
+  type: 'prop';
+}
+
+interface FormItemComponent extends FormItemBase {
+  type: 'component';
+  model: string;
+  component: string;
+}
+
+interface FormItemValue extends FormItemBase {
+  type: 'value';
+  getValue: (value) => unknown;
+}
+
+type FormItem = FormItemProp | FormItemComponent | FormItemValue;
 
 // 校验文件
 async function check(fileRecordData: FileRecordData, idx: number) {
@@ -138,6 +162,66 @@ async function del(fileRecordData: FileRecordData, idx: number) {
     listState.loadingList[idx] = false;
   }
 }
+
+const formItemList: FormItem[] = [
+  {
+    type: 'prop',
+    label: '文件名',
+    prop: 'filename',
+    props: {
+      class: 'singe-line-ellipsis',
+    },
+  },
+  {
+    type: 'value',
+    label: '创建时间',
+    prop: 'gmtCreated',
+    getValue: (value: string) => new Date(value).toLocaleString(),
+  },
+  {
+    type: 'component',
+    label: '上传状态',
+    prop: 'status',
+    model: 'status',
+    component: defineAsyncComponent(() => import('./FileStatus.vue')),
+  },
+  {
+    type: 'component',
+    label: '校验状态',
+    prop: 'checkStatus',
+    model: 'checkStatus',
+    component: defineAsyncComponent(() => import('./FileCheckStatus.vue')),
+  },
+  {
+    type: 'value',
+    label: '文件大小',
+    prop: 'size',
+    getValue: (value: number) => transformByte(value),
+  },
+];
+
+const rows = computed<FormItem[][]>(() => {
+  if (configStore.size === 'small') {
+    return formItemList.map((item) => [item]);
+  }
+
+  const step = configStore.size === 'default' ? 2 : 4;
+
+  const list: FormItem[][] = [];
+  for (let i = 0; i < formItemList.length; i += step) {
+    list.push(formItemList.slice(i, i + step));
+  }
+
+  return list;
+});
+
+const span = computed(() => {
+  if (configStore.size === 'small') return 24;
+
+  if (configStore.size === 'default') return 12;
+
+  return 6;
+});
 
 async function onCreated() {
   await getList();
