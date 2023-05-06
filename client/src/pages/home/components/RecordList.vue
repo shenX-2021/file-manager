@@ -217,10 +217,15 @@ async function mergeChunk(fileRecordData: FileRecordData) {
 
 // 取消合并切片
 async function cancelMergeChunk(fileRecordData: FileRecordData) {
-  // 合并切片请求
-  await cancelMergeChunkApi(fileRecordData.id);
+  try {
+    fileRecordData.loading = true;
+    // 合并切片请求
+    await cancelMergeChunkApi(fileRecordData.id);
 
-  fileRecordData.status = FileStatusEnum.CHUNK_UPLOADED;
+    fileRecordData.status = FileStatusEnum.CHUNK_UPLOADED;
+  } finally {
+    fileRecordData.loading = false;
+  }
 }
 
 const formItemList: FormItem[] = [

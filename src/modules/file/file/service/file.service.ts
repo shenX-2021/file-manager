@@ -329,10 +329,9 @@ export class FileService {
       }
       if (e.message === 'file closed') {
         throw new ConflictException('已取消合并切片的请求');
-      } else {
-        await fileHandle.close();
       }
 
+      await fileHandle.close();
       throw e;
     });
 

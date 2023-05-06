@@ -33,5 +33,10 @@ process.on('uncaughtException', (e) => {
     console.error('磁盘空间不足错误:', e);
   }
 
+  if (e.message === 'file closed') {
+    // TODO: 可以做邮件提醒
+    console.error('文件句柄已关闭，还在处理使用句柄导致的错误:', e);
+  }
+
   throw e;
 });
