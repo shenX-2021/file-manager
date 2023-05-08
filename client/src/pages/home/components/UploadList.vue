@@ -11,11 +11,19 @@
             <el-row v-for="(cols, rowIdx) in rows" :key="rowIdx">
               <el-col v-for="(col, colIdx) in cols" :key="colIdx" :span="span">
                 <el-form-item :label="col.label">
-                  <component
-                    v-if="col.type === 'component'"
-                    :[col.model]="item[col.prop]"
-                    :is="col.component"
-                  />
+                  <template v-if="col.type === 'component'">
+                    <file-status
+                      v-if="col.prop === 'status'"
+                      :status="item[col.prop]"
+                      :file-hash="item.fileHash"
+                      :size="item.size"
+                    />
+                    <component
+                      v-else
+                      :[col.model]="item[col.prop]"
+                      :is="col.component"
+                    />
+                  </template>
                   <span v-else-if="col.type === 'value'" v-bind="col.props">
                     {{ col.getValue(item[col.prop]) }}
                   </span>
@@ -43,6 +51,7 @@ import { computed, defineAsyncComponent } from 'vue';
 import { transformByte } from '@src/utils';
 import UploadRightLayout from '@src/pages/home/components/UploadRightLayout.vue';
 import { ElCol, ElRow } from 'element-plus/es';
+import FileStatus from '@src/pages/home/components/FileStatus.vue';
 
 const { uploadState } = useUpload();
 const configStore = useConfigStore();

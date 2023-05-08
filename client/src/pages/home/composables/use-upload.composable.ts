@@ -51,19 +51,20 @@ const uploadState = reactive<{
   uploadPercentageMap: {},
 });
 
-function initUploadState() {
+// 初始化计算hash的参数
+function initCalcHash() {
   uploadState.hashPercentage = 0;
-  uploadState.status = UploadStatusEnum.WAIT;
+  uploadState.uploadDisabled = false;
 }
 // 上传文件请求处理
 async function handleUpload(file: File) {
   uploadState.uploadDisabled = true;
-  uploadState.status = UploadStatusEnum.UPLOADING;
   const fileChunkList = createFileChunk(file);
   const { startHash, endHash, fileHash } = await calculateHash(
     file,
     fileChunkList,
   );
+  initCalcHash();
   uploadState.fileChunkList = fileChunkList;
 
   const { uploadedList, fileRecordId } = await verifyFile(
@@ -91,13 +92,10 @@ async function handleUpload(file: File) {
       await uploadChunks(uploadedList, listItem || uploadState.list[0]);
     }
   }
-
-  uploadState.uploadDisabled = false;
 }
 
 // 暂停上传
 async function handlePause(uploadFileRecordData: ListItem) {
-  uploadState.status = UploadStatusEnum.PAUSE;
   uploadFileRecordData.uploadStatus = UploadStatusEnum.PAUSE;
 
   uploadFileRecordData.requestList.forEach((xhr) => xhr?.abort());
@@ -105,7 +103,6 @@ async function handlePause(uploadFileRecordData: ListItem) {
 }
 // 恢复上传
 async function handleResume(uploadFileRecordData: ListItem) {
-  uploadState.status = UploadStatusEnum.UPLOADING;
   const { uploadedList, fileRecordId } = await verifyFile(
     uploadFileRecordData.filename,
     uploadFileRecordData.fileHash,
@@ -184,7 +181,6 @@ async function uploadChunks(
     });
 
     ElMessage({ message: '上传文件成功', type: 'success' });
-    // initState();
     await getList();
   } else {
     ElMessage({ message: '未知原因，上传切片不成功', type: 'error' });
@@ -248,8 +244,6 @@ async function verifyFile(
         message: '该文件已上传，无需重复上传',
         type: 'success',
       });
-      uploadState.status = UploadStatusEnum.WAIT;
-      // initState();
       return {};
     }
     const { uploadedList, id } = res.data;
@@ -418,8 +412,6 @@ async function getUploadFileRecordData(
       message: '文件记录不存在',
       type: 'error',
     });
-    uploadState.status = UploadStatusEnum.WAIT;
-    // initState();
     return;
   }
   return ref<ListItem>({
@@ -455,7 +447,6 @@ function createAbortHandler(map: Record<number, number>, index: number) {
 export function useUpload() {
   return {
     uploadState,
-    initUploadState,
     handleUpload,
     handlePause,
     handleResume,

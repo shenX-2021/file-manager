@@ -9,6 +9,7 @@ const listState = reactive<{
   formData: FileRecordListFormData;
   list: FileRecordData[];
   total?: number;
+  mergeTimer?: ReturnType<typeof setTimeout>;
 }>({
   formData: {
     pageSize: 9999,

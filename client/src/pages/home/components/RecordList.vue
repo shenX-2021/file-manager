@@ -219,6 +219,8 @@ async function mergeChunk(fileRecordData: FileRecordData) {
 async function cancelMergeChunk(fileRecordData: FileRecordData) {
   try {
     fileRecordData.loading = true;
+    clearTimeout(listState.mergeTimer);
+    delete listState.mergeTimer;
     // 合并切片请求
     await cancelMergeChunkApi(fileRecordData.id);
 

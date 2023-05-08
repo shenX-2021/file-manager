@@ -16,8 +16,10 @@ import { FileStatusEnum } from '@src/enums';
 import { useConfigStore } from '@src/store';
 import { reactive, watch } from 'vue';
 import { mergeChunkApi } from '@src/http/apis';
+import { useList } from '@src/pages/home/composables';
 
 const configStore = useConfigStore();
+const { listState } = useList();
 
 const state = reactive({
   percentage: 0,
@@ -54,26 +56,26 @@ const fileStatusMap: Record<FileStatusEnum, { text: string; color: string }> = {
     color: '#67c23a',
   },
 };
-let timer;
+
 watch(
   () => props.status,
   (newVal) => {
     if (newVal === FileStatusEnum.CHUNK_MERGING) {
-      clearTimeout(timer);
-      timer = setTimeout(async function checkMergePercentage() {
+      clearTimeout(listState.mergeTimer);
+      listState.mergeTimer = setTimeout(async function checkMergePercentage() {
         const res = await mergeChunkApi({
           fileHash: props.fileHash,
           size: props.size,
         });
         state.percentage = res.percentage;
         if (state.percentage !== 100) {
-          timer = setTimeout(checkMergePercentage, 1000);
+          listState.mergeTimer = setTimeout(checkMergePercentage, 1000);
         } else {
           emit('after-merge');
         }
       }, 500);
     } else {
-      clearTimeout(timer);
+      clearTimeout(listState.mergeTimer);
     }
   },
 );

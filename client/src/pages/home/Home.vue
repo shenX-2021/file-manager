@@ -40,18 +40,36 @@
 
 <script setup lang="ts">
 import RecordList from '@src/pages/home/components/RecordList.vue';
-import { useUpload } from '@src/pages/home/composables';
+import { useList, useUpload } from '@src/pages/home/composables';
 import UploadList from '@src/pages/home/components/UploadList.vue';
+import { UploadStatusEnum } from '@src/enums';
 
-const { uploadState, handleUpload, initUploadState } = useUpload();
+const { uploadState, handleUpload } = useUpload();
+const { listState } = useList();
 
 // 上传的文件改动
 function handleFileChange(file: File) {
   if (!file) return;
-  initUploadState();
   handleUpload(file);
   return false;
 }
+
+window.onbeforeunload = () => {
+  // 是否正在计算hash
+  const isCalcHash =
+    uploadState.hashPercentage !== 0 || uploadState.uploadDisabled;
+  if (isCalcHash) return isCalcHash;
+  // 判断上传文件列表中是否有任务在处理中
+  const isUploadLoading = uploadState.list.some(
+    (item) => item.uploadStatus === UploadStatusEnum.UPLOADING,
+  );
+  if (isUploadLoading) return isUploadLoading;
+  // 判断文件列表是否有任务在处理中
+  const isListLoading = listState.list.some((item) => item.loading);
+  if (isListLoading) return isListLoading;
+
+  return isListLoading || isUploadLoading || null;
+};
 </script>
 
 <style lang="scss" scoped>
