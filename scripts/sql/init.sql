@@ -1,3 +1,5 @@
+BEGIN TRANSACTION;
+
 CREATE TABLE tb_user(
   account TEXT NOT NULL DEFAULT '',
   pwd TEXT NOT NULL DEFAULT '',
@@ -25,3 +27,5 @@ CREATE TABLE tb_version(
 );
 
 INSERT INTO tb_version(version_no) VALUES (1);
+
+COMMIT;

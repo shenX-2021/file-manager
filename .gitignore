@@ -38,3 +38,4 @@ target/
 
 ecosystem-debug.config.js
 .env
+init.lock

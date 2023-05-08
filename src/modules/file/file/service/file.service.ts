@@ -219,8 +219,9 @@ export class FileService {
     if (fileEntity.status !== FileStatusEnum.CHUNK_UPLOADED) {
       const mergeData = FileService.MERGE_DATA_MAP[fileEntity.id];
       if (fileEntity.status === FileStatusEnum.CHUNK_MERGING && mergeData) {
-        const percentage =
-          Math.floor(mergeData.finishedSet.size / mergeData.chunkCount) * 100;
+        const percentage = Math.floor(
+          (mergeData.finishedSet.size / mergeData.chunkCount) * 100,
+        );
 
         if (percentage === 100) {
           const fileStat = await fse.stat(filePath).catch(() => {

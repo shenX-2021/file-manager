@@ -6,6 +6,7 @@
   "private": true,
   "license": "UNLICENSED",
   "scripts": {
+    "init": "node scripts/init.js",
     "build": "npm run build:server && npm run build:client",
     "build:server": "nest build",
     "build:client": "cd client && npm run build",
@@ -20,7 +21,8 @@
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
-    "test:e2e": "jest --config ./test/jest-e2e.json"
+    "test:e2e": "jest --config ./test/jest-e2e.json",
+    "postinstall": "cd client && npm ci"
   },
   "dependencies": {
     "@nestjs/common": "^9.0.0",

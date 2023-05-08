@@ -2,7 +2,7 @@
  * 错误日志
  */
 function printError(message) {
-  console.error('❌', new Error(message));
+  console.error('❌ ', new Error(message));
   process.exit(1);
 }
 
@@ -10,14 +10,14 @@ function printError(message) {
  * 日志
  */
 function print(message) {
-  console.log('🚴', message);
+  console.log('🚴 ', message);
 }
 
 /**
  * 成功日志
  */
 function printSuccess(message) {
-  console.log('👌', message);
+  console.log('👌 ', message);
 }
 
 module.exports = {
