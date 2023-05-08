@@ -68,7 +68,7 @@ watch(
           size: props.size,
         });
         state.percentage = res.percentage;
-        if (state.percentage !== 100) {
+        if (state.percentage !== 100 && listState.mergeTimer !== undefined) {
           listState.mergeTimer = setTimeout(checkMergePercentage, 1000);
         } else {
           emit('after-merge');

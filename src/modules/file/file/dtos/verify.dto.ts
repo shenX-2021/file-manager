@@ -16,7 +16,7 @@ export class VerifyDto {
   @IsNotEmpty({ message: 'endHash不能为空' })
   readonly endHash: string;
 
-  @Length(1, 64, { message: 'filename错误' })
+  @Length(1, 64, { message: '文件名长度范围为1~64位' })
   @IsString({ message: 'filename必须为字符串' })
   @IsNotEmpty({ message: 'filename不能为空' })
   readonly filename: string;
