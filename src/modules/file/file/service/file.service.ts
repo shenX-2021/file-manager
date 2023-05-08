@@ -24,6 +24,7 @@ interface MergeData {
   promiseHandle: Promise<number[]>;
   finishedSet: Set<string>;
   chunkCount: number;
+  closing: boolean;
 }
 
 @Injectable()
@@ -297,7 +298,7 @@ export class FileService {
         () =>
           new Promise<number>(async (resolve, reject) => {
             const mergeData = FileService.MERGE_DATA_MAP[fileEntity.id];
-            if (!mergeData) {
+            if (!mergeData || mergeData.closing) {
               throw new Error(`文件【id: ${fileEntity.id}】的合并处理已取消`);
             }
             // 直接读取文件到内存，会比stream流更快，但更占内存
@@ -341,6 +342,7 @@ export class FileService {
       promiseHandle,
       finishedSet: new Set<string>(),
       chunkCount: this.getChunkCount(fileEntity.size),
+      closing: false,
     };
 
     return {
@@ -362,6 +364,7 @@ export class FileService {
       throw new BadRequestException(`文件【id: ${id}】当前没有合并切片`);
     }
 
+    mergeData.closing = true;
     await mergeData.fileHandle.close();
     delete FileService.MERGE_DATA_MAP[id];
 
