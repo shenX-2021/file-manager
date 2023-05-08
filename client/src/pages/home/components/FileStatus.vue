@@ -5,9 +5,9 @@
     :color="fileStatusMap[props.status].color"
   >
     {{ fileStatusMap[props.status].text }}
-    <span v-if="props.status === FileStatusEnum.CHUNK_MERGING"
-      >{{ state.percentage }}%</span
-    >
+    <span v-if="props.status === FileStatusEnum.CHUNK_MERGING">
+      {{ state.percentage }}%
+    </span>
   </el-tag>
 </template>
 

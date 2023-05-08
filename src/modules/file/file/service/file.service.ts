@@ -1,6 +1,5 @@
 import {
   BadRequestException,
-  ConflictException,
   Injectable,
   InternalServerErrorException,
   NotFoundException,
@@ -219,6 +218,7 @@ export class FileService {
     const chunkDir = this.getChunkDir(fileHash);
 
     if (fileEntity.status !== FileStatusEnum.CHUNK_UPLOADED) {
+      // 切片正在合并
       if (fileEntity.status === FileStatusEnum.CHUNK_MERGING) {
         const mergeData = FileService.MERGE_DATA_MAP[fileEntity.id];
         if (!mergeData) {
@@ -252,6 +252,12 @@ export class FileService {
 
         return {
           percentage,
+        };
+      }
+      // 文件已上传完毕
+      if (fileEntity.status === FileStatusEnum.FINISHED) {
+        return {
+          percentage: 100,
         };
       }
 
