@@ -38,5 +38,7 @@ process.on('uncaughtException', (e) => {
     console.error('文件句柄已关闭，还在处理使用句柄导致的错误:', e);
   }
 
-  throw e;
+  console.error('未被捕获的错误:', e);
+
+  process.exit(1);
 });

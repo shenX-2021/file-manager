@@ -25,6 +25,7 @@ interface MergeData {
   finishedSet: Set<string>;
   chunkCount: number;
   closing: boolean;
+  limit: pLimit.Limit;
 }
 
 @Injectable()
@@ -218,8 +219,13 @@ export class FileService {
     const chunkDir = this.getChunkDir(fileHash);
 
     if (fileEntity.status !== FileStatusEnum.CHUNK_UPLOADED) {
-      const mergeData = FileService.MERGE_DATA_MAP[fileEntity.id];
-      if (fileEntity.status === FileStatusEnum.CHUNK_MERGING && mergeData) {
+      if (fileEntity.status === FileStatusEnum.CHUNK_MERGING) {
+        const mergeData = FileService.MERGE_DATA_MAP[fileEntity.id];
+        if (!mergeData) {
+          throw new BadRequestException(
+            '合并切片的数据缓存丢失，请重新上传切片',
+          );
+        }
         const percentage = Math.floor(
           (mergeData.finishedSet.size / mergeData.chunkCount) * 100,
         );
@@ -299,7 +305,8 @@ export class FileService {
           new Promise<number>(async (resolve, reject) => {
             const mergeData = FileService.MERGE_DATA_MAP[fileEntity.id];
             if (!mergeData || mergeData.closing) {
-              throw new Error(`文件【id: ${fileEntity.id}】的合并处理已取消`);
+              console.log(`文件【id: ${fileEntity.id}】的合并处理已取消`);
+              return resolve(-1);
             }
             // 直接读取文件到内存，会比stream流更快，但更占内存
             const chunk = await fse.readFile(path.join(chunkDir, chunkName), {
@@ -327,14 +334,19 @@ export class FileService {
       await fileEntity.save();
 
       if (e.message === 'ENOSPC: no space left on device, write') {
-        throw new BadRequestException('磁盘空间不足，无法合并切片');
-      }
-      if (e.message === 'file closed') {
-        throw new ConflictException('已取消合并切片的请求');
+        console.trace('磁盘空间不足，无法合并切片');
+      } else if (e.message === 'file closed') {
+        console.trace('已取消合并切片的请求');
+      } else {
+        console.error('未处理的异常:', e);
+        // TODO: 这里可以做邮件提醒
       }
 
-      await fileHandle.close();
-      throw e;
+      try {
+        await fileHandle.close();
+      } catch (e) {}
+
+      return [];
     });
 
     FileService.MERGE_DATA_MAP[fileEntity.id] = {
@@ -343,6 +355,7 @@ export class FileService {
       finishedSet: new Set<string>(),
       chunkCount: this.getChunkCount(fileEntity.size),
       closing: false,
+      limit,
     };
 
     return {
@@ -365,6 +378,7 @@ export class FileService {
     }
 
     mergeData.closing = true;
+    mergeData.limit.clearQueue();
     await mergeData.fileHandle.close();
     delete FileService.MERGE_DATA_MAP[id];
 
