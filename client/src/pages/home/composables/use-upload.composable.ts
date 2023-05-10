@@ -120,12 +120,12 @@ async function handleResume(uploadFileRecordData: ListItem) {
   }
 }
 // 上传文件切片
+const limit = pLimit(5);
 async function uploadChunks(
   uploadedList: string[],
   uploadFileRecordData: ListItem,
 ) {
   uploadFileRecordData.uploadStatus = UploadStatusEnum.UPLOADING;
-  const limit = pLimit(5);
   uploadState.uploadPercentageMap[uploadFileRecordData.id] = {};
   const percentageMap =
     uploadState.uploadPercentageMap[uploadFileRecordData.id];
