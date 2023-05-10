@@ -7,13 +7,13 @@ import {
   mergeChunkApi,
   verifyFileApi,
 } from '@src/http/apis';
-import { FileConfigEnum, UploadStatusEnum } from '@src/enums';
+import { FileConfigEnum, FileStatusEnum, UploadStatusEnum } from '@src/enums';
 import pLimit from 'p-limit';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { useList } from '@src/pages/home/composables/use-list.composable';
 import HashWorker from '@src/workers/hash.js?worker';
 
-const { getList } = useList();
+const { getList, listState } = useList();
 
 export interface ListItem extends FileRecordData {
   chunkCount: number;
@@ -125,7 +125,7 @@ async function uploadChunks(
   uploadFileRecordData: ListItem,
 ) {
   uploadFileRecordData.uploadStatus = UploadStatusEnum.UPLOADING;
-  const limit = pLimit(6);
+  const limit = pLimit(5);
   uploadState.uploadPercentageMap[uploadFileRecordData.id] = {};
   const percentageMap =
     uploadState.uploadPercentageMap[uploadFileRecordData.id];
@@ -177,14 +177,20 @@ async function uploadChunks(
     uploadState.list = uploadState.list.filter(
       (item) => item.fileHash !== uploadFileRecordData.fileHash,
     );
+    ElMessage({ message: '上传文件成功', type: 'success' });
+
+    await getList();
     // 合并切片请求
     await mergeChunkApi({
       fileHash: uploadFileRecordData.fileHash,
       size: uploadFileRecordData.size,
     });
-
-    ElMessage({ message: '上传文件成功', type: 'success' });
-    await getList();
+    const fileRecordData = listState.list.find(
+      (item) => item.fileHash === uploadFileRecordData.fileHash,
+    );
+    if (fileRecordData) {
+      fileRecordData.status = FileStatusEnum.CHUNK_MERGING;
+    }
   } else {
     ElMessage({ message: '未知原因，上传切片不成功', type: 'error' });
   }
