@@ -4,6 +4,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import * as path from 'path';
 import { DATABASE_DIR } from './config';
 import { ServeStaticModule } from '@nestjs/serve-static';
+import { SharedModule } from './modules/shared/shared.module';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { ServeStaticModule } from '@nestjs/serve-static';
         etag: true,
       },
     }),
+    SharedModule,
   ],
   controllers: [],
   providers: [],

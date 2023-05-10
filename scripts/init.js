@@ -1,10 +1,10 @@
 const path = require('path');
 const fse = require('fs-extra');
 const { execSync } = require('child_process');
-const sqlite = require('sqlite3');
 const dotenv = require('dotenv');
 const crypto = require('crypto');
 const { printSuccess, print, printError } = require('./libs/print');
+const { Database } = require('./libs/database');
 
 dotenv.config({ path: path.join(__dirname, '../.env') });
 
@@ -45,40 +45,38 @@ boostrap();
  * 数据库的初始化处理
  */
 async function handleDB() {
-  return new Promise(async (resolve, reject) => {
-    print('sqlite初始化处理...');
-    const DATABASE_DIR = process.env.DATABASE_DIR;
-    const USER_ACCOUNT = process.env.USER_ACCOUNT;
-    const USER_PWD = process.env.USER_PWD;
+  print('sqlite初始化处理...');
+  const DATABASE_DIR = process.env.DATABASE_DIR;
+  const USER_ACCOUNT = process.env.USER_ACCOUNT;
+  const USER_PWD = process.env.USER_PWD;
 
-    await fse.ensureDir(DATABASE_DIR);
-    const dbPath = path.join(DATABASE_DIR, 'file.db');
-    try {
-      await fse.access(dbPath);
-      await fse.rm(dbPath);
-    } catch (e) {}
+  await fse.ensureDir(DATABASE_DIR);
+  const dbPath = path.join(DATABASE_DIR, 'file.db');
+  try {
+    await fse.access(dbPath);
+    await fse.rm(dbPath);
+  } catch (e) {}
 
-    const db = new sqlite.Database(dbPath);
-    const initSQL = fse
-      .readFileSync(path.join(__dirname, 'sql/init.sql'))
-      .toString();
-    db.exec(initSQL);
+  const db = new Database(dbPath);
+  await db.init();
 
-    const salt = crypto.randomUUID().slice(0, 8);
-    await db
-      .prepare(
-        `INSERT INTO tb_user(account, pwd, salt) 
-    VALUES(?, ?, ?)`,
-      )
-      .run([USER_ACCOUNT, _md5(_md5(USER_PWD) + salt), salt], (err) => {
-        if (err) {
-          return reject(err);
-        }
+  // 添加账号
+  const salt = crypto.randomUUID().slice(0, 8);
+  await db.run(
+    `INSERT INTO tb_user(id, account, pwd, salt) 
+      VALUES(?, ?, ?, ?)`,
+    [1, USER_ACCOUNT, _md5(_md5(USER_PWD) + salt), salt],
+  );
 
-        printSuccess('sqlite初始化处理成功！');
-        resolve();
-      });
-  });
+  // 添加配置
+  await db.run(
+    `INSERT INTO 
+          tb_config(id, upload_bandwidth_status, upload_bandwidth, download_bandwidth_status, download_bandwidth)
+         VALUES(?, ?, ?, ?, ?)`,
+    [1, 0, 0, 0, 0],
+  );
+
+  printSuccess('sqlite初始化处理成功！');
 }
 
 /**
