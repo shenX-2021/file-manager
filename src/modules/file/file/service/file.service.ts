@@ -235,26 +235,6 @@ export class FileService {
           (mergeData.finishedSet.size / mergeData.chunkCount) * 100,
         );
 
-        if (percentage === 100) {
-          const fileStat = await fse.stat(filePath).catch(() => {
-            throw new InternalServerErrorException('合并后的文件丢失');
-          });
-          if (fileStat.size !== size) {
-            throw new BadRequestException('合并后的文件大小不符合预期');
-          }
-          // 移除切片
-          await fse.remove(chunkDir);
-
-          // 关闭文件
-          await mergeData.fileHandle.close();
-          // 删除合并文件数据缓存
-          delete FileService.MERGE_DATA_MAP[fileEntity.id];
-
-          // 将文件状态改为已完成
-          fileEntity.status = FileStatusEnum.FINISHED;
-          await fileEntity.save();
-        }
-
         return {
           percentage,
         };
@@ -340,25 +320,47 @@ export class FileService {
       );
     });
 
-    const promiseHandle = Promise.all(promises).catch(async (e) => {
-      fileEntity.status = FileStatusEnum.CHUNK_UPLOADED;
-      await fileEntity.save();
+    const promiseHandle = Promise.all(promises)
+      .then(async () => {
+        const fileStat = await fse.stat(filePath).catch(() => {
+          throw new InternalServerErrorException('合并后的文件丢失');
+        });
+        if (fileStat.size !== size) {
+          throw new BadRequestException('合并后的文件大小不符合预期');
+        }
+        // 移除切片
+        await fse.remove(chunkDir);
 
-      if (e.message === 'ENOSPC: no space left on device, write') {
-        console.trace('磁盘空间不足，无法合并切片');
-      } else if (e.message === 'file closed') {
-        console.trace('已取消合并切片的请求');
-      } else {
-        console.error('未处理的异常:', e);
-        // TODO: 这里可以做邮件提醒
-      }
-
-      try {
+        // 关闭文件
         await fileHandle.close();
-      } catch (e) {}
+        // 删除合并文件数据缓存
+        delete FileService.MERGE_DATA_MAP[fileEntity.id];
 
-      return [];
-    });
+        // 将文件状态改为已完成
+        fileEntity.status = FileStatusEnum.FINISHED;
+        await fileEntity.save();
+
+        return [];
+      })
+      .catch(async (e) => {
+        fileEntity.status = FileStatusEnum.CHUNK_UPLOADED;
+        await fileEntity.save();
+
+        if (e.message === 'ENOSPC: no space left on device, write') {
+          console.trace('磁盘空间不足，无法合并切片');
+        } else if (e.message === 'file closed') {
+          console.trace('已取消合并切片的请求');
+        } else {
+          console.error('未处理的异常:', e);
+          // TODO: 这里可以做邮件提醒
+        }
+
+        try {
+          await fileHandle.close();
+        } catch (e) {}
+
+        return [];
+      });
 
     FileService.MERGE_DATA_MAP[fileEntity.id] = {
       fileHandle,

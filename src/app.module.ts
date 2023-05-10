@@ -19,6 +19,9 @@ import { ServeStaticModule } from '@nestjs/serve-static';
     ServeStaticModule.forRoot({
       rootPath: path.join(__dirname, '..', 'client/dist'),
       exclude: ['/fm/api/*'],
+      serveStaticOptions: {
+        etag: true,
+      },
     }),
   ],
   controllers: [],
