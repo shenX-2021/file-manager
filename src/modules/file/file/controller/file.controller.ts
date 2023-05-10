@@ -6,12 +6,13 @@ import {
   ParseIntPipe,
   Patch,
   Post,
-  UploadedFile,
+  Query,
+  Req,
   UseInterceptors,
 } from '@nestjs/common';
 import { FileService } from '../service/file.service';
 import { MergeChunkDto, UploadChunkDto, VerifyDto } from '../dtos';
-import { FileInterceptor } from '@nestjs/platform-express';
+import { Request } from 'express';
 
 @Controller('file')
 export class FileController {
@@ -29,12 +30,12 @@ export class FileController {
    * 上传文件切片
    */
   @Post('upload')
-  @UseInterceptors(FileInterceptor('chunk'))
-  uploadChunk(
-    @Body() uploadChunkDto: UploadChunkDto,
-    @UploadedFile() file: Express.Multer.File,
+  @UseInterceptors()
+  async uploadChunk(
+    @Query() uploadChunkDto: UploadChunkDto,
+    @Req() req: Request,
   ) {
-    return this.fileService.uploadChunk(uploadChunkDto, file);
+    return this.fileService.uploadChunk(uploadChunkDto, req);
   }
 
   /**

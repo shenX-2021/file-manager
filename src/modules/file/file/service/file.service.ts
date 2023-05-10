@@ -17,6 +17,9 @@ import { FileEntity } from '../../../../entities';
 import { Repository } from 'typeorm';
 import { FileCheckStatusEnum, FileStatusEnum } from '../../../../enums';
 import { UPLOAD_CHUNK_DIR, UPLOAD_FILE_DIR } from '../../../../config';
+import { Request } from 'express';
+import { MulterOptions } from '@nestjs/platform-express/multer/interfaces/multer-options.interface';
+import { memoryStorage } from 'multer';
 
 interface MergeData {
   fileHandle: fsp.FileHandle;
@@ -157,7 +160,7 @@ export class FileService {
   /**
    * 上传文件切片
    */
-  async uploadChunk(uploadChunkDto: UploadChunkDto, file: Express.Multer.File) {
+  async uploadChunk(uploadChunkDto: UploadChunkDto, req: Request) {
     const { fileHash, chunkIndex, size } = uploadChunkDto;
 
     const filePath = this.getFilePath(fileHash);
@@ -165,6 +168,8 @@ export class FileService {
 
     await fse.ensureDir(chunkDir);
     const chunkPath = path.join(chunkDir, chunkIndex.toString());
+
+    const { buffer } = await this.parseBuffer(req);
 
     // 文件已上传
     if (await fse.exists(filePath)) {
@@ -193,7 +198,7 @@ export class FileService {
       // do nothing
     }
 
-    await fse.writeFile(chunkPath, file.buffer, { flag: 'wx' });
+    await fse.writeFile(chunkPath, buffer, { flag: 'wx' });
     return {
       status: 1,
     };
@@ -436,5 +441,33 @@ export class FileService {
    */
   private getChunkCount(size: number) {
     return Math.ceil(size / FileService.CHUNK_MAX_SIZE);
+  }
+
+  /**
+   * 获取文件buffer
+   */
+  public async parseBuffer(
+    req: Request,
+    options?: MulterOptions['storage'] & { limits?: any },
+  ): Promise<{
+    buffer: Buffer;
+  }> {
+    const storage = memoryStorage();
+
+    const multerOptions: MulterOptions = { storage };
+    if (options) Object.assign(multerOptions, { storage: options });
+
+    return new Promise((resolve, reject) => {
+      const buffers: Buffer[] = [];
+      req.on('data', (chunk: Buffer) => {
+        buffers.push(chunk);
+      });
+      req.on('end', () => {
+        const data = Buffer.concat(buffers);
+        const payload = { buffer: data };
+        resolve(payload);
+      });
+      req.on('error', reject);
+    });
   }
 }

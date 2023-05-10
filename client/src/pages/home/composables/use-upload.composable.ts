@@ -24,7 +24,7 @@ export interface ListItem extends FileRecordData {
 
 interface RequestOpts {
   url: string;
-  data: any;
+  chunk: Blob;
   requestList: XMLHttpRequest[];
   onProgress: (e) => void;
   onAbort: (e) => void;
@@ -138,19 +138,22 @@ async function uploadChunks(
       return !isUploaded;
     })
     .map((item) => {
-      const formData = new FormData();
-      formData.append('chunk', item.chunk);
-      formData.append('chunkIndex', item.index.toString());
-      formData.append('filename', uploadFileRecordData.filename);
-      formData.append('fileHash', uploadFileRecordData.fileHash);
-      formData.append('size', uploadFileRecordData.size.toString());
-      return { formData, index: item.index, size: item.chunk.size };
+      const query = `?fileHash=${encodeURIComponent(
+        uploadFileRecordData.fileHash,
+      )}&chunkIndex=${item.index}&size=${uploadFileRecordData.size}`;
+
+      return {
+        index: item.index,
+        size: item.chunk.size,
+        query,
+        chunk: item.chunk,
+      };
     })
-    .map(({ formData, index, size }) =>
+    .map(({ chunk, index, size, query }) =>
       limit(() =>
         uploadRequest({
-          url: '/fm/api/file/upload',
-          data: formData,
+          url: '/fm/api/file/upload' + query,
+          chunk,
           requestList: uploadFileRecordData.requestList,
           onProgress: createProgressHandler(percentageMap, index),
           onAbort: createAbortHandler(percentageMap, index),
@@ -367,7 +370,7 @@ function getChunkHash(chunk: Blob): Promise<string> {
 // 请求处理
 function uploadRequest({
   url,
-  data,
+  chunk,
   requestList,
   onProgress,
   onAbort,
@@ -395,7 +398,9 @@ function uploadRequest({
       }
     };
     xhr.open('post', url);
-    xhr.send(data);
+    xhr.setRequestHeader('Content-Type', 'application/octet-stream');
+
+    xhr.send(chunk);
     // 暴露当前 xhr 给外部
     requestList?.push(xhr);
   });
