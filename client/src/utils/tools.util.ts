@@ -57,7 +57,7 @@ export function debounce(fn: (...args) => void, timestamp = 300) {
 const sizeUnitList = ['B', 'KB', 'MB', 'GB', 'TB', 'PB'];
 export function transformByte(byte: number): string {
   let index = 0;
-  while (byte > 1024) {
+  while (byte >= 1024) {
     byte /= 1024;
     index++;
   }

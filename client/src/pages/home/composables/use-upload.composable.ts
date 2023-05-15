@@ -101,10 +101,14 @@ async function startUpload() {
     throw e;
   }
 
+  // eslint-disable-next-line no-console
+  console.time(`upload-${uploadFileRecordData.id}`);
   uploadHandler.value.on('close', async (isDone) => {
     uploadHandler.value = undefined;
 
     if (isDone) {
+      // eslint-disable-next-line no-console
+      console.timeEnd(`upload-${uploadFileRecordData.id}`);
       await afterUploaded(uploadFileRecordData);
     } else {
       ElMessage({

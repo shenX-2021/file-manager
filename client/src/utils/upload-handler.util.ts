@@ -6,6 +6,8 @@ export interface UploadedEventData {
   size: number;
 }
 
+const bandwidth = 0;
+
 export class UploadWebsocket extends EventEmitter {
   // 每次上传的数据大小峰值
   static BLOB_SIZE = 100 * 1024;
@@ -16,12 +18,14 @@ export class UploadWebsocket extends EventEmitter {
 
   public readonly id: number;
   private index = -1;
-  private chunkSize = 0;
   private offset = 0n;
   private readonly url: string;
   private readonly ws: WebSocket;
+  private byte = 0;
+  private duration = 0;
+  private chunk: Blob = new Blob();
   private uploadedSize = 0;
-  private blobList: Blob[] = [];
+  private lastSendTime = 0;
 
   private readyUpload = false;
   private uploading = false;
@@ -45,8 +49,9 @@ export class UploadWebsocket extends EventEmitter {
     );
   }
 
-  constructor(fileHash: string, size: number) {
+  constructor(fileHash: string, size: number, bps: number) {
     super();
+    this.updateBps(bps);
     this.url = `ws://localhost:8888/fm/api/ws?fileHash=${fileHash}&size=${size}`;
     this.ws = new WebSocket(this.url);
     this.ws.onopen = this.onopen.bind(this);
@@ -84,14 +89,18 @@ export class UploadWebsocket extends EventEmitter {
           index: this.index,
           size: this.uploadedSize,
         });
-        setTimeout(async () => {
+        const duration = this.duration - (Date.now() - this.lastSendTime);
+        if (duration > 0) {
+          setTimeout(async () => {
+            await this.sendBlob();
+          }, duration);
+        } else {
           await this.sendBlob();
-        }, 20);
+        }
         break;
       }
       // 全部上传成功
       case 3: {
-        this.blobList = [];
         this.readyUpload = false;
         this.uploading = false;
         this.uploadedSize = 0;
@@ -100,7 +109,10 @@ export class UploadWebsocket extends EventEmitter {
             action: 'reset',
           }),
         );
-        this.emit('uploaded-size', { index: this.index, size: this.chunkSize });
+        this.emit('uploaded-size', {
+          index: this.index,
+          size: this.chunk.size,
+        });
         break;
       }
       case 50005: {
@@ -111,10 +123,30 @@ export class UploadWebsocket extends EventEmitter {
       }
       // 未处理的异常
       default: {
-        // eslint-disable-next-line no-console
         this.emit('error', new Error(`${res.code}: ${res.error}`));
         this.close();
       }
+    }
+  }
+
+  /**
+   * 更新bps
+   */
+  updateBps(bps: number) {
+    const m = 1024 * 1024;
+    if (bps <= 0) {
+      // bps为0时，则不限速
+      this.byte = m;
+      this.duration = 0;
+    } else if (bps > m) {
+      // bps大于1MB/s，则每次上传的blob为1MB
+      const count = bps / m;
+      this.byte = m;
+      this.duration = Math.floor(1000 / count);
+    } else {
+      // bps小于1MB/s，则每次上传的blob为bps的值
+      this.byte = bps;
+      this.duration = 1000;
     }
   }
   private onerror(ev: Event) {
@@ -130,8 +162,9 @@ export class UploadWebsocket extends EventEmitter {
   private async sendBlob() {
     if (this.sending || !this.isAllowSend) return;
     this.sending = true;
-    const blob = this.blobList.shift();
-    if (!blob) {
+    const offset = Number(this.offset);
+    const blob = this.chunk.slice(offset, offset + this.byte);
+    if (!blob || blob.size === 0) {
       // TODO: 重置处理
       return;
     }
@@ -153,8 +186,7 @@ export class UploadWebsocket extends EventEmitter {
 
     if (this.isAllowSend) {
       this.ws.send(buffer);
-    } else {
-      this.blobList.unshift(blob);
+      this.lastSendTime = Date.now();
     }
 
     this.sending = false;
@@ -167,17 +199,10 @@ export class UploadWebsocket extends EventEmitter {
     if (this.uploading) {
       throw new Error('目前正在存在上传任务，请稍后再试');
     }
-    // 分隔切片
-    this.index = index;
-    let cur = 0;
-    while (cur < chunk.size) {
-      const end = cur + UploadWebsocket.BLOB_SIZE;
-      this.blobList.push(chunk.slice(cur, end));
-      cur = end;
-    }
 
+    this.index = index;
     this.uploading = true;
-    this.chunkSize = chunk.size;
+    this.chunk = chunk;
     // 上传前，需要设置切片的配置
     this.ws.send(
       JSON.stringify({
@@ -208,10 +233,8 @@ export class UploadWebsocket extends EventEmitter {
     this.readyUpload = false;
     this.uploading = false;
     this.index = -1;
-    this.chunkSize = 0;
     this.offset = 0n;
     this.uploadedSize = 0;
-    this.blobList = [];
   }
 
   close() {
@@ -298,14 +321,23 @@ export class UploadHandler extends EventEmitter {
 
   // 开始上传
   upload() {
-    const length = Math.min(5, this.chunkQueue.length);
+    const baseBandwidthThreadCount = Math.ceil(
+      bandwidth / UploadWebsocket.BLOB_SIZE,
+    );
+
+    const thread =
+      baseBandwidthThreadCount === 0 || baseBandwidthThreadCount > 5
+        ? 5
+        : baseBandwidthThreadCount;
+    const length = Math.min(thread, this.chunkQueue.length);
     if (length === 0) {
       // 文件无需上传的处理
       this.close();
       return;
     }
+    const wsBps = Math.ceil(bandwidth / length);
     for (let i = 0; i < length; i++) {
-      const ws = new UploadWebsocket(this.fileHash, this.file.size);
+      const ws = new UploadWebsocket(this.fileHash, this.file.size, wsBps);
       ws.on('open', this.uploadChunk.bind(this, ws));
       ws.on('uploaded-size', (data) => {
         const { index, size } = data;
@@ -320,6 +352,11 @@ export class UploadHandler extends EventEmitter {
         }
         if (this.wsList.length === 0 && UploadHandler.UPLOADING) {
           this.handleClose();
+        } else {
+          const bps = Math.ceil(bandwidth / this.wsList.length);
+          for (const uploadWs of this.wsList) {
+            uploadWs.updateBps(bps);
+          }
         }
       });
       ws.on('error', (err) => {
@@ -367,6 +404,12 @@ export class UploadHandler extends EventEmitter {
       const isDone = this.wsList.every((item) => !item.isWorking);
       if (isDone) {
         this.close();
+      } else {
+        for (const uploadWs of this.wsList) {
+          if (!uploadWs.isWorking) {
+            uploadWs.close();
+          }
+        }
       }
       return;
     }
