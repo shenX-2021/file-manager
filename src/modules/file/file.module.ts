@@ -5,10 +5,11 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { FileEntity, UserEntity } from '../../entities';
 import { FileRecordController } from './file-record/controller/file-record.controller';
 import { FileRecordService } from './file-record/service/file-record.service';
+import { UploadGateway } from './gateway/upload/upload.gateway';
 
 @Module({
   imports: [TypeOrmModule.forFeature([UserEntity, FileEntity])],
   controllers: [FileController, FileRecordController],
-  providers: [FileService, FileRecordService],
+  providers: [FileService, FileRecordService, UploadGateway],
 })
 export class FileModule {}

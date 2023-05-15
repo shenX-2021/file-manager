@@ -20,6 +20,7 @@ import { UPLOAD_CHUNK_DIR, UPLOAD_FILE_DIR } from '../../../../config';
 import { Request } from 'express';
 import { MulterOptions } from '@nestjs/platform-express/multer/interfaces/multer-options.interface';
 import { memoryStorage } from 'multer';
+import { ConfigService } from '../../../shared/services/config/config.service';
 
 interface MergeData {
   fileHandle: fsp.FileHandle;
@@ -40,12 +41,14 @@ export class FileService {
   constructor(
     @InjectRepository(FileEntity)
     private readonly fileEntityRepository: Repository<FileEntity>,
+    private readonly configService: ConfigService,
   ) {}
 
   /**
    * 验证是否已经上传
    */
   async verify(verifyDto: VerifyDto): Promise<VerifyRo> {
+    // TODO: 查验磁盘空间
     const { filename, fileHash, size, startHash, endHash } = verifyDto;
     const filePath = this.getFilePath(fileHash);
 
@@ -459,6 +462,44 @@ export class FileService {
     const multerOptions: MulterOptions = { storage };
     if (options) Object.assign(multerOptions, { storage: options });
 
+    // 如果上传带宽限制大于0，则需要限制上传的速度
+    if (!this.configService.uploadBandwidth) {
+      const bps = this.configService.uploadBandwidth * 1024;
+      const onceReadSize = bps / 20;
+      const duration = 50;
+
+      return new Promise((resolve, reject) => {
+        const buffers: Buffer[] = [];
+        req.on('readable', async function () {
+          req.socket.pause();
+          let data: Buffer;
+          while ((data = this.read(onceReadSize))) {
+            buffers.push(data);
+            await new Promise((resolve) => {
+              setTimeout(() => {
+                resolve(1);
+              }, duration);
+            });
+          }
+          req.socket.resume();
+        });
+        req.on('end', () => {
+          const data = Buffer.concat(buffers);
+          const payload = { buffer: data };
+
+          resolve(payload);
+        });
+        req.on('error', reject);
+        req.on('close', () => {
+          console.log('close');
+        });
+        req.socket.on('drain', () => {
+          console.log('drain');
+        });
+      });
+    }
+
+    // 未限制上传带宽，直接拼接buffer
     return new Promise((resolve, reject) => {
       const buffers: Buffer[] = [];
       req.on('data', (chunk: Buffer) => {
@@ -470,6 +511,12 @@ export class FileService {
         resolve(payload);
       });
       req.on('error', reject);
+      req.on('close', () => {
+        console.log('close');
+      });
+      req.socket.on('drain', () => {
+        console.log('drain');
+      });
     });
   }
 }

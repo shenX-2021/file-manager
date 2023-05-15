@@ -6,6 +6,7 @@ import { ValidationPipe } from '@nestjs/common';
 import * as fse from 'fs-extra';
 import { UPLOAD_CHUNK_DIR, UPLOAD_FILE_DIR } from './config';
 import * as process from 'process';
+import { WsAdapter } from './adapters';
 
 const port = 8888;
 
@@ -15,6 +16,7 @@ async function bootstrap() {
   await fse.ensureDir(UPLOAD_CHUNK_DIR);
   const app = await NestFactory.create(AppModule);
   app.setGlobalPrefix('/fm/api');
+  app.useWebSocketAdapter(new WsAdapter(app));
   // 全局使用管道(数据校验)
   app.useGlobalPipes(
     new ValidationPipe({
