@@ -1,16 +1,15 @@
 import { FileConfigEnum } from '@src/enums';
 import EventEmitter from 'events';
+import { useConfigStore } from '@src/store';
 
 export interface UploadedEventData {
   index: number;
   size: number;
 }
 
-const bandwidth = 0;
-
 export class UploadWebsocket extends EventEmitter {
   // 每次上传的数据大小峰值
-  static BLOB_SIZE = 100 * 1024;
+  static BLOB_SIZE = 1024 * 1024;
   // 二进制数据header的长度
   static HEADER_LENGTH = 8;
   // id计算
@@ -133,15 +132,14 @@ export class UploadWebsocket extends EventEmitter {
    * 更新bps
    */
   updateBps(bps: number) {
-    const m = 1024 * 1024;
     if (bps <= 0) {
       // bps为0时，则不限速
-      this.byte = m;
+      this.byte = UploadWebsocket.BLOB_SIZE;
       this.duration = 0;
-    } else if (bps > m) {
+    } else if (bps > UploadWebsocket.BLOB_SIZE) {
       // bps大于1MB/s，则每次上传的blob为1MB
-      const count = bps / m;
-      this.byte = m;
+      const count = bps / UploadWebsocket.BLOB_SIZE;
+      this.byte = UploadWebsocket.BLOB_SIZE;
       this.duration = Math.floor(1000 / count);
     } else {
       // bps小于1MB/s，则每次上传的blob为bps的值
@@ -321,8 +319,10 @@ export class UploadHandler extends EventEmitter {
 
   // 开始上传
   upload() {
+    const configStore = useConfigStore();
+
     const baseBandwidthThreadCount = Math.ceil(
-      bandwidth / UploadWebsocket.BLOB_SIZE,
+      configStore.uploadBandwidth / UploadWebsocket.BLOB_SIZE,
     );
 
     const thread =
@@ -335,7 +335,7 @@ export class UploadHandler extends EventEmitter {
       this.close();
       return;
     }
-    const wsBps = Math.ceil(bandwidth / length);
+    const wsBps = Math.ceil(configStore.uploadBandwidth / length);
     for (let i = 0; i < length; i++) {
       const ws = new UploadWebsocket(this.fileHash, this.file.size, wsBps);
       ws.on('open', this.uploadChunk.bind(this, ws));
@@ -353,7 +353,9 @@ export class UploadHandler extends EventEmitter {
         if (this.wsList.length === 0 && UploadHandler.UPLOADING) {
           this.handleClose();
         } else {
-          const bps = Math.ceil(bandwidth / this.wsList.length);
+          const bps = Math.ceil(
+            configStore.uploadBandwidth / this.wsList.length,
+          );
           for (const uploadWs of this.wsList) {
             uploadWs.updateBps(bps);
           }

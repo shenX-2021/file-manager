@@ -1,5 +1,5 @@
 <template>
-  <template v-if="configStore.size === 'small'">
+  <template v-if="configStore.state.size === 'small'">
     <el-row justify="center">
       <el-progress
         type="circle"
@@ -12,11 +12,7 @@
         :span="12"
         class="flexCenter"
       >
-        <el-button
-          type="warning"
-          :size="configStore.size"
-          @click="handlePause(props.fileRecordData)"
-        >
+        <el-button type="warning" @click="handlePause(props.fileRecordData)">
           暂停
         </el-button>
       </el-col>
@@ -25,18 +21,12 @@
         :span="12"
         class="flexCenter"
       >
-        <el-button
-          type="primary"
-          :size="configStore.size"
-          @click="handleResume(props.fileRecordData)"
-        >
+        <el-button type="primary" @click="handleResume(props.fileRecordData)">
           恢复
         </el-button>
       </el-col>
       <el-col :span="12" class="flexCenter">
-        <el-button type="danger" :size="configStore.size" @click="del">
-          删除
-        </el-button>
+        <el-button type="danger" @click="del"> 删除 </el-button>
       </el-col>
     </el-row>
   </template>
@@ -52,11 +42,7 @@
         v-if="props.fileRecordData.uploadStatus === UploadStatusEnum.UPLOADING"
         justify="end"
       >
-        <el-button
-          type="warning"
-          :size="configStore.size"
-          @click="handlePause(props.fileRecordData)"
-        >
+        <el-button type="warning" @click="handlePause(props.fileRecordData)">
           暂停
         </el-button>
       </el-row>
@@ -64,18 +50,12 @@
         v-else-if="props.fileRecordData.uploadStatus === UploadStatusEnum.PAUSE"
         justify="end"
       >
-        <el-button
-          type="primary"
-          :size="configStore.size"
-          @click="handleResume(props.fileRecordData)"
-        >
+        <el-button type="primary" @click="handleResume(props.fileRecordData)">
           恢复
         </el-button>
       </el-row>
       <el-row justify="end" class="mt10">
-        <el-button type="danger" :size="configStore.size" @click="del">
-          删除
-        </el-button>
+        <el-button type="danger" @click="del"> 删除 </el-button>
       </el-row>
     </el-col>
   </el-row>

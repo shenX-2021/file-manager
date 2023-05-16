@@ -1,4 +1,5 @@
 import { createApp } from 'vue';
+import 'default-passive-events';
 import 'element-plus/theme-chalk/src/message.scss';
 import 'element-plus/theme-chalk/src/message-box.scss';
 import 'element-plus/theme-chalk/src/overlay.scss';

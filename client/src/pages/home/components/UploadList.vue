@@ -1,6 +1,6 @@
 <template>
   <el-card header="正在上传的文件" shadow="never" body-style="padding: 6px;">
-    <el-form :size="configStore.size">
+    <el-form>
       <el-card
         class="mb10"
         v-for="(item, idx) in uploadState.list"
@@ -87,11 +87,11 @@ const formItemList: FormItem[] = [
 ];
 
 const rows = computed<FormItem[][]>(() => {
-  if (configStore.size === 'small') {
+  if (configStore.state.size === 'small') {
     return formItemList.map((item) => [item]);
   }
 
-  const step = configStore.size === 'default' ? 2 : 4;
+  const step = configStore.state.size === 'default' ? 2 : 4;
 
   const list: FormItem[][] = [];
   for (let i = 0; i < formItemList.length; i += step) {
@@ -102,9 +102,9 @@ const rows = computed<FormItem[][]>(() => {
 });
 
 const span = computed(() => {
-  if (configStore.size === 'small') return 24;
+  if (configStore.state.size === 'small') return 24;
 
-  if (configStore.size === 'default') return 12;
+  if (configStore.state.size === 'default') return 12;
 
   return 6;
 });

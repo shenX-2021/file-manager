@@ -1,5 +1,7 @@
 <template>
-  <router-view />
+  <el-config-provider :size="configStore.state.size">
+    <router-view />
+  </el-config-provider>
 </template>
 
 <script setup lang="ts">

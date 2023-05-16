@@ -32,9 +32,11 @@
           </div>
         </div>
       </el-upload>
+      <div class="ml10" @click="isShowConfig = true">设置</div>
     </div>
     <upload-list v-show="uploadState.list.length > 0" class="mt10" />
     <record-list class="mt10" />
+    <config-dialog v-model:is-show="isShowConfig" />
   </div>
 </template>
 
@@ -43,9 +45,13 @@ import RecordList from '@src/pages/home/components/RecordList.vue';
 import { useList, useUpload } from '@src/pages/home/composables';
 import UploadList from '@src/pages/home/components/UploadList.vue';
 import { UploadStatusEnum } from '@src/enums';
+import ConfigDialog from '@src/pages/home/components/ConfigDialog.vue';
+import { ref } from 'vue';
 
 const { uploadState, handleUpload } = useUpload();
 const { listState } = useList();
+
+const isShowConfig = ref(false);
 
 // 上传的文件改动
 function handleFileChange(file: File) {
@@ -74,7 +80,7 @@ window.onbeforeunload = () => {
 
 <style lang="scss" scoped>
 .upload {
-  width: 90vw;
+  width: 86vw;
   height: 150px;
   position: relative;
   font-size: 1vw;

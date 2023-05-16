@@ -3,7 +3,7 @@
     <div v-if="listState.list.length === 0" class="flexCenter w100per h100">
       当前没有文件
     </div>
-    <el-form v-else :size="configStore.size">
+    <el-form v-else>
       <el-card
         class="mb10"
         v-for="(item, idx) in listState.list"
@@ -45,11 +45,7 @@
               justify="end"
               v-if="item.status === FileStatusEnum.FINISHED"
             >
-              <el-button
-                type="primary"
-                :size="configStore.size"
-                @click="check(item, idx)"
-              >
+              <el-button type="primary" @click="check(item, idx)">
                 {{
                   item.checkStatus === FileCheckStatusEnum.UNCHECKED
                     ? '校验文件'
@@ -62,11 +58,7 @@
               class="mt10"
               v-if="item.status === FileStatusEnum.CHUNK_UPLOADED"
             >
-              <el-button
-                type="primary"
-                :size="configStore.size"
-                @click="mergeChunk(item)"
-              >
+              <el-button type="primary" @click="mergeChunk(item)">
                 合并切片
               </el-button>
             </el-row>
@@ -75,11 +67,7 @@
               class="mt10"
               v-if="item.status === FileStatusEnum.CHUNK_MERGING"
             >
-              <el-button
-                type="danger"
-                :size="configStore.size"
-                @click="cancelMergeChunk(item)"
-              >
+              <el-button type="danger" @click="cancelMergeChunk(item)">
                 取消合并
               </el-button>
             </el-row>
@@ -88,20 +76,12 @@
               class="mt10"
               v-if="item.status === FileStatusEnum.FINISHED"
             >
-              <el-button
-                type="info"
-                :size="configStore.size"
-                @click="downloadFile(item)"
-              >
+              <el-button type="info" @click="downloadFile(item)">
                 下载
               </el-button>
             </el-row>
             <el-row justify="end" class="mt10">
-              <el-button
-                type="danger"
-                :size="configStore.size"
-                @click="del(item, idx)"
-              >
+              <el-button type="danger" @click="del(item, idx)">
                 删除
               </el-button>
             </el-row>
@@ -268,11 +248,11 @@ const formItemList: FormItem[] = [
 ];
 
 const rows = computed<FormItem[][]>(() => {
-  if (configStore.size === 'small') {
+  if (configStore.state.size === 'small') {
     return formItemList.map((item) => [item]);
   }
 
-  const step = configStore.size === 'default' ? 2 : 4;
+  const step = configStore.state.size === 'default' ? 2 : 4;
 
   const list: FormItem[][] = [];
   for (let i = 0; i < formItemList.length; i += step) {
@@ -283,9 +263,9 @@ const rows = computed<FormItem[][]>(() => {
 });
 
 const span = computed(() => {
-  if (configStore.size === 'small') return 24;
+  if (configStore.state.size === 'small') return 24;
 
-  if (configStore.size === 'default') return 12;
+  if (configStore.state.size === 'default') return 12;
 
   return 6;
 });

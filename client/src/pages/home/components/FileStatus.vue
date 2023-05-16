@@ -1,9 +1,5 @@
 <template>
-  <el-tag
-    class="file-status"
-    :size="configStore.size"
-    :color="fileStatusMap[props.status].color"
-  >
+  <el-tag class="file-status" :color="fileStatusMap[props.status].color">
     {{ fileStatusMap[props.status].text }}
     <span v-if="props.status === FileStatusEnum.CHUNK_MERGING">
       {{ state.percentage }}%
@@ -13,12 +9,10 @@
 
 <script setup lang="ts">
 import { FileStatusEnum } from '@src/enums';
-import { useConfigStore } from '@src/store';
 import { reactive, watch } from 'vue';
 import { mergeChunkApi } from '@src/http/apis';
 import { useList } from '@src/pages/home/composables';
 
-const configStore = useConfigStore();
 const { listState } = useList();
 
 const state = reactive({
