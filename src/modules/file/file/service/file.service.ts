@@ -121,19 +121,27 @@ export class FileService {
     if (await fse.exists(chunkDir)) {
       const chunkNames = await fse.readdir(chunkDir);
       for (const chunkName of chunkNames) {
-        // 切片不为最后一块
-        if (chunkName !== (chunkCount - 1).toString()) {
-          // 检查大小是否正常
-          try {
-            const chunkPath = path.join(chunkDir, chunkName);
-            const chunkStat = await fse.stat(chunkPath);
-            // 大小和切片最大的大小不一致，移除切片
-            if (chunkStat.size !== FileService.CHUNK_MAX_SIZE) {
-              await fse.rm(chunkPath);
-            }
-          } catch (e) {
-            // do nothing
+        // 检查大小是否正常
+        try {
+          const chunkPath = path.join(chunkDir, chunkName);
+          const chunkStat = await fse.stat(chunkPath);
+          let expectSize: number;
+          if (chunkName !== (chunkCount - 1).toString()) {
+            // 切片不为最后一块，期望大小为切片最大值
+            expectSize = FileService.CHUNK_MAX_SIZE;
+          } else {
+            // 计算最后一块切片应有的大小
+            expectSize =
+              size % FileService.CHUNK_MAX_SIZE
+                ? size % FileService.CHUNK_MAX_SIZE
+                : FileService.CHUNK_MAX_SIZE;
           }
+          // 大小和期望的大小不一致，移除切片
+          if (chunkStat.size !== expectSize) {
+            await fse.rm(chunkPath);
+          }
+        } catch (e) {
+          // do nothing
         }
       }
       // 获取已上传的切片列表
