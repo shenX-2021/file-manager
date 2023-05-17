@@ -39,3 +39,6 @@ target/
 ecosystem-debug.config.js
 .env
 init.lock
+
+# client
+client/components.d.ts
