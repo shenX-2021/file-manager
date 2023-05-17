@@ -16,7 +16,7 @@ async function bootstrap() {
   await fse.ensureDir(UPLOAD_FILE_DIR);
   await fse.ensureDir(UPLOAD_CHUNK_DIR);
   const app = await NestFactory.create(AppModule);
-  app.setGlobalPrefix('/fm/api');
+  app.setGlobalPrefix('fm/api');
   app.useWebSocketAdapter(new WsAdapter(app));
   app.use(cookieParser(COOKIE_SECRET));
   // 全局使用管道(数据校验)

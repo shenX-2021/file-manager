@@ -22,7 +22,8 @@ import { APP_GUARD } from '@nestjs/core';
       },
     }),
     ServeStaticModule.forRoot({
-      rootPath: path.join(__dirname, '..', 'client/dist'),
+      rootPath: path.join(__dirname, '..', 'client/dist/fm/web'),
+      serveRoot: '/fm/web',
       exclude: ['/fm/api/*'],
       serveStaticOptions: {
         etag: true,
