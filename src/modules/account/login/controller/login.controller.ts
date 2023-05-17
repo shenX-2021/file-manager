@@ -3,6 +3,7 @@ import { LoginService } from '@src/modules/account/login/service/login.service';
 import { LoginDto } from '@src/modules/account/login/dtos';
 import { Response } from 'express';
 import { AuthGuard } from '@src/guards/auth/auth.guard';
+import { Throttle } from '@nestjs/throttler';
 
 @Controller('login')
 export class LoginController {
@@ -11,6 +12,7 @@ export class LoginController {
   /**
    * 登录
    */
+  @Throttle(15, 60)
   @Post()
   login(@Body() loginDto: LoginDto, @Res({ passthrough: true }) res: Response) {
     return this.loginService.login(loginDto, res);

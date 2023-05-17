@@ -7,6 +7,8 @@ import { ServeStaticModule } from '@nestjs/serve-static';
 import { SharedModule } from './modules/shared/shared.module';
 import { AppModule as AppCtrModule } from './modules/app/app.module';
 import { AccountModule } from '@src/modules/account/account.module';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { APP_GUARD } from '@nestjs/core';
 
 @Module({
   imports: [
@@ -26,11 +28,21 @@ import { AccountModule } from '@src/modules/account/account.module';
         etag: true,
       },
     }),
+    // 接口限流
+    ThrottlerModule.forRoot({
+      ttl: 2 * 60,
+      limit: 180,
+    }),
     SharedModule,
     AppCtrModule,
     AccountModule,
   ],
   controllers: [],
-  providers: [],
+  providers: [
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
+  ],
 })
 export class AppModule {}

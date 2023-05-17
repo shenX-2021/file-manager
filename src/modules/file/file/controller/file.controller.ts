@@ -15,6 +15,7 @@ import { FileService } from '../service/file.service';
 import { MergeChunkDto, UploadChunkDto, VerifyDto } from '../dtos';
 import { Request } from 'express';
 import { AuthGuard } from '@src/guards/auth/auth.guard';
+import { Throttle } from '@nestjs/throttler';
 
 @UseGuards(AuthGuard)
 @Controller('file')
@@ -60,6 +61,7 @@ export class FileController {
   /**
    * 下载文件
    */
+  @Throttle(10, 60)
   @Get('download/:id')
   download(@Param('id', ParseIntPipe) id: number) {
     return this.fileService.download(id);

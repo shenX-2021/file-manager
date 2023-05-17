@@ -37,6 +37,11 @@ axios.interceptors.response.use(
         type: 'error',
       });
       router.push('/login');
+    } else if (err?.response?.status === 429) {
+      ElMessage({
+        message: '请求过于频繁，请稍后再试',
+        type: 'error',
+      });
     } else {
       ElMessage({
         message: Array.isArray(err?.response?.data?.message)
