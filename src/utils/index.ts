@@ -1,1 +1,1 @@
-export * from './md5.util';
+export * from './hash.util';

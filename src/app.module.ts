@@ -6,6 +6,7 @@ import { DATABASE_DIR } from './config';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { SharedModule } from './modules/shared/shared.module';
 import { AppModule as AppCtrModule } from './modules/app/app.module';
+import { AccountModule } from '@src/modules/account/account.module';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { AppModule as AppCtrModule } from './modules/app/app.module';
     }),
     SharedModule,
     AppCtrModule,
+    AccountModule,
   ],
   controllers: [],
   providers: [],

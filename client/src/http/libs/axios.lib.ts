@@ -1,5 +1,6 @@
 import AxiosStatic from 'axios';
 import { ElMessage } from 'element-plus/es';
+import { router } from '@src/router';
 
 export const axios = AxiosStatic.create({
   baseURL: '/fm/api',
@@ -30,6 +31,12 @@ axios.interceptors.response.use(
         message: '系统异常，请联系管理员',
         type: 'error',
       });
+    } else if (err?.response?.status === 401) {
+      ElMessage({
+        message: '登录已失效，请重新登录',
+        type: 'error',
+      });
+      router.push('/login');
     } else {
       ElMessage({
         message: Array.isArray(err?.response?.data?.message)

@@ -1,7 +1,9 @@
-import { Body, Controller, Get, Patch } from '@nestjs/common';
+import { Body, Controller, Get, Patch, UseGuards } from '@nestjs/common';
 import { AppConfigService } from '@src/modules/app/config/service/app-config.service';
 import { SetDto } from '@src/modules/app/config/dtos';
+import { AuthGuard } from '@src/guards/auth/auth.guard';
 
+@UseGuards(AuthGuard)
 @Controller('app/config')
 export class AppConfigController {
   constructor(private readonly appConfigService: AppConfigService) {}

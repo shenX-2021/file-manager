@@ -4,9 +4,10 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
 import * as fse from 'fs-extra';
-import { UPLOAD_CHUNK_DIR, UPLOAD_FILE_DIR } from './config';
+import { COOKIE_SECRET, UPLOAD_CHUNK_DIR, UPLOAD_FILE_DIR } from './config';
 import * as process from 'process';
 import { WsAdapter } from './adapters';
+import * as cookieParser from 'cookie-parser';
 
 const port = 8888;
 
@@ -17,6 +18,7 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   app.setGlobalPrefix('/fm/api');
   app.useWebSocketAdapter(new WsAdapter(app));
+  app.use(cookieParser(COOKIE_SECRET));
   // 全局使用管道(数据校验)
   app.useGlobalPipes(
     new ValidationPipe({

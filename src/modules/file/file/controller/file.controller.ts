@@ -8,12 +8,15 @@ import {
   Post,
   Query,
   Req,
+  UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
 import { FileService } from '../service/file.service';
 import { MergeChunkDto, UploadChunkDto, VerifyDto } from '../dtos';
 import { Request } from 'express';
+import { AuthGuard } from '@src/guards/auth/auth.guard';
 
+@UseGuards(AuthGuard)
 @Controller('file')
 export class FileController {
   constructor(private readonly fileService: FileService) {}

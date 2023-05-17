@@ -1,6 +1,6 @@
 import { acceptHMRUpdate, defineStore } from 'pinia';
 import { computed, reactive } from 'vue';
-import { getConfigApi, setConfigApi } from '@src/http/apis';
+import { ConfigRo, setConfigApi } from '@src/http/apis';
 
 export type ElSize = 'default' | 'small' | 'large';
 
@@ -60,18 +60,21 @@ export const useConfigStore = defineStore('config', () => {
     return state.uploadBandwidth;
   });
 
-  getConfigApi().then((res) => {
-    state.uploadBandwidthStatus = res.uploadBandwidthStatus;
-    state.uploadBandwidth = res.uploadBandwidth;
-    state.downloadBandwidth = res.downloadBandwidth;
-    state.downloadBandwidthStatus = res.downloadBandwidthStatus;
+  function initConfig(data: ConfigRo) {
+    if (state.configInit) return;
+
+    state.uploadBandwidthStatus = data.uploadBandwidthStatus;
+    state.uploadBandwidth = data.uploadBandwidth;
+    state.downloadBandwidth = data.downloadBandwidth;
+    state.downloadBandwidthStatus = data.downloadBandwidthStatus;
 
     state.configInit = true;
-  });
+  }
 
   return {
     state,
     updateSize,
+    initConfig,
     uploadBandwidth,
     updateUploadBandwidth,
     updateUploadBandwidthStatus,

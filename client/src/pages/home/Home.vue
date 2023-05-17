@@ -32,7 +32,10 @@
           </div>
         </div>
       </el-upload>
-      <div class="ml10" @click="isShowConfig = true">设置</div>
+      <div class="ml10">
+        <div @click="isShowConfig = true">设置</div>
+        <div class="mt10" @click="logout">登出</div>
+      </div>
     </div>
     <upload-list v-show="uploadState.list.length > 0" class="mt10" />
     <record-list class="mt10" />
@@ -47,9 +50,14 @@ import UploadList from '@src/pages/home/components/UploadList.vue';
 import { UploadStatusEnum } from '@src/enums';
 import ConfigDialog from '@src/pages/home/components/ConfigDialog.vue';
 import { ref } from 'vue';
+import { getConfigApi, logoutApi } from '@src/http/apis';
+import { useConfigStore } from '@src/store';
+import { useRouter } from 'vue-router';
 
+const router = useRouter();
 const { uploadState, handleUpload } = useUpload();
 const { listState } = useList();
+const configStore = useConfigStore();
 
 const isShowConfig = ref(false);
 
@@ -58,6 +66,12 @@ function handleFileChange(file: File) {
   if (!file) return;
   handleUpload(file);
   return false;
+}
+
+// 登出
+async function logout() {
+  await logoutApi();
+  await router.push({ name: 'Login' });
 }
 
 window.onbeforeunload = () => {
@@ -76,6 +90,12 @@ window.onbeforeunload = () => {
 
   return isListLoading || isUploadLoading || null;
 };
+
+async function onCreated() {
+  const configData = await getConfigApi();
+  configStore.initConfig(configData);
+}
+onCreated();
 </script>
 
 <style lang="scss" scoped>

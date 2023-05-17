@@ -20,4 +20,12 @@ export class UserEntity extends BaseEntity {
     comment: '密码',
   })
   pwd: string;
+
+  @Column({
+    type: 'text',
+    nullable: false,
+    default: '',
+    comment: '密码的盐',
+  })
+  salt: string;
 }

@@ -7,10 +7,13 @@ import {
   ParseIntPipe,
   Patch,
   Query,
+  UseGuards,
 } from '@nestjs/common';
 import { ChangeFilenameDto, DetailByPropDto, ListDto } from '../dtos';
 import { FileRecordService } from '../service/file-record.service';
+import { AuthGuard } from '@src/guards/auth/auth.guard';
 
+@UseGuards(AuthGuard)
 @Controller('file/record')
 export class FileRecordController {
   constructor(private readonly fileRecordService: FileRecordService) {}

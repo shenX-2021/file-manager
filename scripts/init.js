@@ -65,7 +65,7 @@ async function handleDB() {
   await db.run(
     `INSERT INTO tb_user(id, account, pwd, salt) 
       VALUES(?, ?, ?, ?)`,
-    [1, USER_ACCOUNT, _md5(_md5(USER_PWD) + salt), salt],
+    [1, USER_ACCOUNT, _sha256(_sha256(USER_PWD) + salt), salt],
   );
 
   // 添加配置
@@ -83,7 +83,7 @@ async function handleDB() {
  * MD5哈希函数
  * @private
  */
-function _md5(text) {
+function _sha256(text) {
   const hash = crypto.createHash('sha256');
   hash.update(text);
   return hash.digest('hex');
