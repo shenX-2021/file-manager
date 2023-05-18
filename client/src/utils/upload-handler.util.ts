@@ -85,6 +85,7 @@ export class UploadWebsocket extends EventEmitter {
       }
       // 上传blob成功，但需要继续上传
       case 2: {
+        this.sending = false;
         const { offset, size } = data;
         this.offset = offset;
         this.uploadedSize += size;
@@ -104,6 +105,7 @@ export class UploadWebsocket extends EventEmitter {
       }
       // 全部上传成功
       case 3: {
+        this.sending = false;
         this.readyUpload = false;
         this.uploading = false;
         this.uploadedSize = 0;
@@ -116,6 +118,29 @@ export class UploadWebsocket extends EventEmitter {
           index: this.index,
           size: this.chunk.size,
         });
+        break;
+      }
+      // 切片的偏移量错误，需要重新上传
+      case 4: {
+        this.sending = false;
+        const { offset } = data;
+        this.offset = offset;
+
+        await this.sendBlob();
+        break;
+      }
+      case 50002: {
+        // 尚未设置切片配置，无法上传
+        this.sending = false;
+        this.emit('error', new Error(`${res.code}: ${res.error}`));
+        this.close();
+        break;
+      }
+      case 50003: {
+        // 还在上传中，请稍后再上传
+        this.sending = false;
+        this.emit('error', new Error(`${res.code}: ${res.error}`));
+        this.close();
         break;
       }
       case 50005: {
@@ -167,6 +192,7 @@ export class UploadWebsocket extends EventEmitter {
     const offset = Number(this.offset);
     const blob = this.chunk.slice(offset, offset + this.byte);
     if (!blob || blob.size === 0) {
+      this.sending = false;
       // TODO: 重置处理
       return;
     }
@@ -189,9 +215,9 @@ export class UploadWebsocket extends EventEmitter {
     if (this.isAllowSend) {
       this.ws.send(buffer);
       this.lastSendTime = Date.now();
+    } else {
+      this.sending = false;
     }
-
-    this.sending = false;
   }
 
   async upload(chunk: Blob, index: number) {

@@ -160,9 +160,13 @@ export class UploadGateway implements OnGatewayConnection<Ws.Websocket> {
     const offset = payload.slice(0, 8).readBigInt64LE();
     const buffer = payload.slice(8);
     if (offset !== currentOffset) {
+      // 文件的偏移量错误，让客户端重发
+      client.chunkData.uploading = false;
       return {
-        code: 50004,
-        error: '文件的偏移量错误',
+        code: 4,
+        data: {
+          offset: Number(currentOffset),
+        },
       };
     }
     await fileHandle.write(buffer);

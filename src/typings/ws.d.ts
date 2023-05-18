@@ -22,6 +22,12 @@ interface ContinueUploadResponse {
 interface UploadDoneResponse {
   code: 3;
 }
+interface ReUploadResponse {
+  code: 4;
+  data: {
+    offset: number;
+  };
+}
 
 export namespace Ws {
   export interface Websocket extends WsWebsocket {
@@ -48,5 +54,6 @@ export namespace Ws {
     | AuthSuccessResponse
     | AllowUploadResponse
     | ContinueUploadResponse
-    | UploadDoneResponse;
+    | UploadDoneResponse
+    | ReUploadResponse;
 }
