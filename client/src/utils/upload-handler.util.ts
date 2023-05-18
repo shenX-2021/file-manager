@@ -7,6 +7,10 @@ export interface UploadedEventData {
   size: number;
 }
 
+const URL = import.meta.env.DEV
+  ? `ws://localhost:8888/fm/ws`
+  : `ws://${window.location.host}/fm/ws`;
+
 export class UploadWebsocket extends EventEmitter {
   // 每次上传的数据大小峰值
   static BLOB_SIZE = 1024 * 1024;
@@ -51,7 +55,7 @@ export class UploadWebsocket extends EventEmitter {
   constructor(fileHash: string, size: number, bps: number) {
     super();
     this.updateBps(bps);
-    this.url = `ws://localhost:8888/fm/api/ws?fileHash=${fileHash}&size=${size}`;
+    this.url = `${URL}?fileHash=${fileHash}&size=${size}`;
     this.ws = new WebSocket(this.url);
     this.ws.onopen = this.onopen.bind(this);
     this.ws.onmessage = this.onmessage.bind(this);

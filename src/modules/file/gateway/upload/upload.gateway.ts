@@ -20,7 +20,7 @@ interface Query {
 }
 
 @WebSocketGateway({
-  path: '/fm/api/ws',
+  path: '/fm/ws',
 })
 export class UploadGateway implements OnGatewayConnection<Ws.Websocket> {
   constructor(private readonly fileService: FileService) {}
@@ -30,7 +30,7 @@ export class UploadGateway implements OnGatewayConnection<Ws.Websocket> {
     client.headers = options.headers;
 
     const query = qs.parse(
-      options.url.replace('/fm/api/ws?', ''),
+      options.url.replace('/fm/ws?', ''),
     ) as unknown as Query;
     const fileHash = query.fileHash;
     const size = parseInt(query.size);
