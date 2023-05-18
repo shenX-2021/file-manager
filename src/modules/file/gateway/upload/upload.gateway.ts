@@ -1,5 +1,6 @@
 import {
   OnGatewayConnection,
+  OnGatewayDisconnect,
   SubscribeMessage,
   WebSocketGateway,
 } from '@nestjs/websockets';
@@ -22,7 +23,11 @@ interface Query {
 @WebSocketGateway({
   path: '/fm/ws',
 })
-export class UploadGateway implements OnGatewayConnection<Ws.Websocket> {
+export class UploadGateway
+  implements
+    OnGatewayConnection<Ws.Websocket>,
+    OnGatewayDisconnect<Ws.Websocket>
+{
   constructor(private readonly fileService: FileService) {}
 
   async handleConnection(client: Ws.Websocket, options) {
@@ -47,6 +52,12 @@ export class UploadGateway implements OnGatewayConnection<Ws.Websocket> {
     client.sendJson({
       code: 0,
     });
+  }
+
+  async handleDisconnect(client: Ws.Websocket) {
+    if (client.chunkData) {
+      await client.chunkData.fileHandle?.close().catch((e) => e);
+    }
   }
 
   handleMessage(client: Ws.Websocket, payload: Buffer): Promise<unknown>;
