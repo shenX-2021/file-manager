@@ -60,7 +60,7 @@ async function handleUpload(file: File) {
     return;
   }
 
-  const { uploadedList, fileRecordId } = await verifyFile(
+  const verifyData = await verifyFile(
     file.name,
     fileHash,
     startHash,
@@ -68,7 +68,8 @@ async function handleUpload(file: File) {
     file.size,
   );
 
-  if (uploadedList && fileRecordId) {
+  if (verifyData) {
+    const { uploadedList, fileRecordId } = verifyData;
     const uploadFileRecordData = ref(
       await getUploadFileRecordData(fileRecordId, file, uploadedList),
     );
@@ -128,7 +129,7 @@ async function startUpload() {
 
 // 上传完成后的处理
 async function afterUploaded(uploadFileRecordData: UnwrapRef<ListItem>) {
-  const { uploadedList: checkUploadedList } = await verifyFile(
+  const verifyData = await verifyFile(
     uploadFileRecordData.filename,
     uploadFileRecordData.fileHash,
     uploadFileRecordData.startHash,
@@ -140,7 +141,7 @@ async function afterUploaded(uploadFileRecordData: UnwrapRef<ListItem>) {
     (item) => item.fileHash !== uploadFileRecordData.fileHash,
   );
 
-  if (checkUploadedList?.length === uploadFileRecordData.chunkCount) {
+  if (verifyData?.uploadedList.length === uploadFileRecordData.chunkCount) {
     ElMessage({ message: '上传文件成功', type: 'success' });
 
     await getList();
@@ -182,10 +183,13 @@ async function verifyFile(
   startHash: string,
   endHash: string,
   size: number,
-): Promise<{
-  uploadedList?: string[];
-  fileRecordId?: number;
-}> {
+): Promise<
+  | {
+      uploadedList: string[];
+      fileRecordId: number;
+    }
+  | undefined
+> {
   let res = await verifyFileApi({
     filename: filename,
     fileHash,
@@ -232,7 +236,8 @@ async function verifyFile(
         message: '该文件已上传，无需重复上传',
         type: 'success',
       });
-      return {};
+      getList().catch((e) => e);
+      return;
     }
     const { uploadedList, id } = res.data;
 
@@ -242,7 +247,7 @@ async function verifyFile(
     };
   }
 
-  return {};
+  return;
 }
 // 创建文件切片
 function createFileChunk(file: File, size = 5 * 1024 * 1024): FileChunkItem[] {
