@@ -6,10 +6,10 @@ export interface UploadedEventData {
   index: number;
   size: number;
 }
-
+const protocol = import.meta.env.VITE_WS_PROTOCOL === 'wss' ? 'wss' : 'ws';
 const URL = import.meta.env.DEV
-  ? `ws://localhost:8888/fm/ws`
-  : `ws://${window.location.host}/fm/ws`;
+  ? `${protocol}://localhost:8888/fm/ws`
+  : `${protocol}://${window.location.host}/fm/ws`;
 
 export class UploadWebsocket extends EventEmitter {
   // 每次上传的数据大小峰值

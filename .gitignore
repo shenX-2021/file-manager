@@ -42,3 +42,4 @@ init.lock
 
 # client
 client/components.d.ts
+client/.env
