@@ -27,7 +27,8 @@ async function boostrap() {
 
   try {
     await fse.access('./init.lock');
-    printError('已经初始化过了，无需重复初始化');
+    printSuccess('已经初始化过了，无需重复初始化');
+    return;
   } catch (e) {}
 
   // 初始化数据库

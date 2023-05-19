@@ -1,0 +1,13 @@
+node_modules/
+dist/
+.idea/
+.vscode/
+.git/
+.env
+
+client/node_modules/
+client/dist/
+client/.idea/
+client/.vscode/
+client/.env
+
