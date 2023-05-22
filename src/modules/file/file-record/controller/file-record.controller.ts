@@ -9,7 +9,12 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
-import { ChangeFilenameDto, DetailByPropDto, ListDto } from '../dtos';
+import {
+  ChangeFilenameDto,
+  DetailByPropDto,
+  ListDto,
+  UpdateOutsideDownloadDto,
+} from '../dtos';
 import { FileRecordService } from '../service/file-record.service';
 import { AuthGuard } from '@src/guards/auth/auth.guard';
 
@@ -67,5 +72,19 @@ export class FileRecordController {
   @Patch('check/:id')
   check(@Param('id', ParseIntPipe) id: number) {
     return this.fileRecordService.check(id);
+  }
+
+  /**
+   * 更新外部下载的启用状态
+   */
+  @Patch('outside-download/:id')
+  updateOutsideDownload(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() updateOutsideDownloadDto: UpdateOutsideDownloadDto,
+  ) {
+    return this.fileRecordService.updateOutsideDownload(
+      id,
+      updateOutsideDownloadDto,
+    );
   }
 }

@@ -15,18 +15,23 @@
             <el-row v-for="(cols, rowIdx) in rows" :key="rowIdx">
               <el-col v-for="(col, colIdx) in cols" :key="colIdx" :span="span">
                 <el-form-item :label="col.label">
-                  <template v-if="col.type === 'component'">
+                  <component
+                    v-if="col.type === 'component'"
+                    :is="col.component"
+                    :[col.model]="item[col.prop]"
+                  />
+                  <template v-else-if="col.type === 'custom'">
                     <file-status
-                      v-if="col.prop === 'status'"
-                      :status="item[col.prop]"
+                      v-if="col.name === 'FileStatus'"
+                      :status="item.status"
                       :file-hash="item.fileHash"
                       :size="item.size"
                       @after-merge="update(item)"
                     />
-                    <component
-                      v-else
-                      :is="col.component"
-                      :[col.model]="item[col.prop]"
+                    <outside-download
+                      v-else-if="col.name === 'OutsideDownload'"
+                      :file-record-data="item"
+                      v-model="item.outsideDownload"
                     />
                   </template>
                   <span v-else-if="col.type === 'value'" v-bind="col.props">
@@ -109,6 +114,7 @@ import { ElMessageBox } from 'element-plus';
 import { useConfigStore } from '@src/store';
 import { computed, defineAsyncComponent } from 'vue';
 import FileStatus from '@src/pages/home/components/FileStatus.vue';
+import OutsideDownload from '@src/pages/home/components/OutsideDownload.vue';
 
 const { listState, getList } = useList();
 const configStore = useConfigStore();
@@ -226,11 +232,9 @@ const formItemList: FormItem[] = [
     getValue: (value: string) => new Date(value).toLocaleString(),
   },
   {
-    type: 'component',
+    type: 'custom',
     label: '上传状态',
-    prop: 'status',
-    model: 'status',
-    component: defineAsyncComponent(() => import('./FileStatus.vue')),
+    name: 'FileStatus',
   },
   {
     type: 'component',
@@ -244,6 +248,11 @@ const formItemList: FormItem[] = [
     label: '文件大小',
     prop: 'size',
     getValue: (value: number) => transformByte(value),
+  },
+  {
+    type: 'custom',
+    label: '外部下载',
+    name: 'OutsideDownload',
   },
 ];
 

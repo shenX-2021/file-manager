@@ -16,6 +16,7 @@ import { MergeChunkDto, UploadChunkDto, VerifyDto } from '../dtos';
 import { Request } from 'express';
 import { AuthGuard } from '@src/guards/auth/auth.guard';
 import { Throttle } from '@nestjs/throttler';
+import { SkipAuth } from '@src/decorators';
 
 @UseGuards(AuthGuard)
 @Controller('file')
@@ -65,5 +66,15 @@ export class FileController {
   @Get('download/:id')
   download(@Param('id', ParseIntPipe) id: number) {
     return this.fileService.download(id);
+  }
+
+  /**
+   * 外部下载文件（无需鉴权）
+   */
+  @SkipAuth()
+  @Throttle(10, 60)
+  @Get('out/:filename')
+  outsideDownload(@Param('filename') filename: string) {
+    return this.fileService.outsideDownload(filename);
   }
 }

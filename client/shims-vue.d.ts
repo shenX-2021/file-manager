@@ -62,4 +62,13 @@ declare interface FormItemValue extends FormItemBase {
   getValue: (value) => unknown;
 }
 
-declare type FormItem = FormItemProp | FormItemComponent | FormItemValue;
+declare interface FormItemCustom extends Pick<FormItemBase, 'label'> {
+  type: 'custom';
+  name: string;
+}
+
+declare type FormItem =
+  | FormItemProp
+  | FormItemComponent
+  | FormItemValue
+  | FormItemCustom;

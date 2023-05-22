@@ -1,5 +1,10 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
-import { ChangeFilenameDto, DetailByPropDto, ListDto } from '../dtos';
+import {
+  ChangeFilenameDto,
+  DetailByPropDto,
+  ListDto,
+  UpdateOutsideDownloadDto,
+} from '../dtos';
 import { InjectRepository } from '@nestjs/typeorm';
 import { FileEntity } from '../../../../entities';
 import { FindOptionsWhere, ILike, In, Not, Repository } from 'typeorm';
@@ -117,11 +122,13 @@ export class FileRecordService {
     const { filename } = changeFilenameDto;
     const fileEntity = await this.fileEntityRepository.findOneBy({ id });
     if (!fileEntity) {
-      throw new BadRequestException('文件不存在，修改文件失败');
+      throw new BadRequestException('文件不存在，修改文件名称失败');
     }
 
-    fileEntity.filename = filename;
-    await fileEntity.save();
+    if (fileEntity.filename !== filename) {
+      fileEntity.filename = filename;
+      await fileEntity.save();
+    }
   }
 
   /**
@@ -178,6 +185,25 @@ export class FileRecordService {
     return {
       checkStatus: FileCheckStatusEnum.SUCCESSFUL,
     };
+  }
+
+  /**
+   * 更新外部下载的启用状态
+   */
+  async updateOutsideDownload(
+    id: number,
+    updateOutsideDownloadDto: UpdateOutsideDownloadDto,
+  ): Promise<void> {
+    const { outsideDownload } = updateOutsideDownloadDto;
+    const fileEntity = await this.fileEntityRepository.findOneBy({ id });
+    if (!fileEntity) {
+      throw new BadRequestException('文件不存在，更新外部下载状态失败');
+    }
+
+    if (fileEntity.outsideDownload !== outsideDownload) {
+      fileEntity.outsideDownload = outsideDownload;
+      await fileEntity.save();
+    }
   }
 
   /**

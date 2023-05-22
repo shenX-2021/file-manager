@@ -4,7 +4,7 @@ import { ElMessage } from 'element-plus/es';
 /**
  * 流式下载，支持大文件
  */
-export function download(id: number, filename: string) {
+export function downloadByStream(id: number, filename: string) {
   const url = `/fm/api/file/download/${id}`;
   const fileStream = streamSaver.createWriteStream(filename);
 
@@ -34,6 +34,27 @@ export function download(id: number, filename: string) {
 
     pump();
   });
+}
+
+/**
+ * 下载文件
+ */
+export function download(id: number, filename: string) {
+  const url = `/fm/api/file/download/${id}`;
+  const a = document.createElement('a');
+  a.style.display = 'none';
+  a.download = filename;
+  a.href = url;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
+
+/**
+ * 复制
+ */
+export async function copy(text: string) {
+  return navigator.clipboard.writeText(text);
 }
 
 /**

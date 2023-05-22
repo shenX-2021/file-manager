@@ -73,4 +73,13 @@ export class FileEntity extends BaseTableEntity {
     comment: '文件校验状态',
   })
   checkStatus: FileCheckStatusEnum;
+
+  @Column({
+    type: 'integer',
+    name: 'outside_download',
+    nullable: false,
+    default: 0,
+    comment: '是否允许外部下载（无需鉴权）',
+  })
+  outsideDownload: 0 | 1;
 }

@@ -11,17 +11,17 @@
             <el-row v-for="(cols, rowIdx) in rows" :key="rowIdx">
               <el-col v-for="(col, colIdx) in cols" :key="colIdx" :span="span">
                 <el-form-item :label="col.label">
-                  <template v-if="col.type === 'component'">
+                  <component
+                    v-if="col.type === 'component'"
+                    :[col.model]="item[col.prop]"
+                    :is="col.component"
+                  />
+                  <template v-else-if="col.type === 'custom'">
                     <file-status
-                      v-if="col.prop === 'status'"
-                      :status="item[col.prop]"
+                      v-if="col.name === 'FileStatus'"
+                      :status="item.status"
                       :file-hash="item.fileHash"
                       :size="item.size"
-                    />
-                    <component
-                      v-else
-                      :[col.model]="item[col.prop]"
-                      :is="col.component"
                     />
                   </template>
                   <span v-else-if="col.type === 'value'" v-bind="col.props">
@@ -47,7 +47,7 @@
 <script setup lang="ts">
 import { useUpload } from '@src/pages/home/composables';
 import { useConfigStore } from '@src/store';
-import { computed, defineAsyncComponent } from 'vue';
+import { computed } from 'vue';
 import { transformByte } from '@src/utils';
 import UploadRightLayout from '@src/pages/home/components/UploadRightLayout.vue';
 import { ElCol, ElRow } from 'element-plus/es';
@@ -72,11 +72,9 @@ const formItemList: FormItem[] = [
     getValue: (value: string) => new Date(value).toLocaleString(),
   },
   {
-    type: 'component',
+    type: 'custom',
     label: '上传状态',
-    prop: 'status',
-    model: 'status',
-    component: defineAsyncComponent(() => import('./FileStatus.vue')),
+    name: 'FileStatus',
   },
   {
     type: 'value',

@@ -436,6 +436,33 @@ export class FileService {
   }
 
   /**
+   * 外部下载文件
+   */
+  async outsideDownload(filename: string) {
+    const fileEntity = await this.fileEntityRepository.findOneBy({ filename });
+    if (!fileEntity) {
+      throw new NotFoundException('文件不存在!');
+    }
+    if (fileEntity.status !== FileStatusEnum.FINISHED) {
+      throw new NotFoundException('文件不存在!!');
+    }
+
+    if (fileEntity.outsideDownload !== 1) {
+      throw new NotFoundException('文件不存在!!!');
+    }
+
+    try {
+      await fse.access(fileEntity.filePath);
+    } catch (e) {
+      throw new NotFoundException('文件不存在!!!!');
+    }
+
+    const file = fse.createReadStream(fileEntity.filePath);
+
+    return new StreamableFile(file);
+  }
+
+  /**
    * 获取文件的chunk块的目录
    */
   public getChunkDir(fileHash: string): string {

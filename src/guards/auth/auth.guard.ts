@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { Observable } from 'rxjs';
 import { LoginService } from '@src/modules/account/login/service/login.service';
+import { SKIP_AUTH_KEY } from '@src/decorators';
 
 @Injectable()
 export class AuthGuard implements CanActivate {
@@ -13,6 +14,10 @@ export class AuthGuard implements CanActivate {
     context: ExecutionContext,
   ): boolean | Promise<boolean> | Observable<boolean> {
     const req = context.switchToHttp().getRequest();
+
+    // 判断是否跳过鉴权
+    const isSkipAuth = Reflect.getMetadata(SKIP_AUTH_KEY, context.getHandler());
+    if (isSkipAuth) return true;
 
     const str = req.signedCookies.sign;
     let data;

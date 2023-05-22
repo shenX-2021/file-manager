@@ -20,6 +20,7 @@ export interface FileRecordData {
   size: number;
   status: FileStatusEnum;
   checkStatus: FileCheckStatusEnum;
+  outsideDownload: 0 | 1;
   gmtCreated: number;
   gmtModified: number;
   loading: boolean;
@@ -37,6 +38,9 @@ export interface DetailByPropFormData {
   startHash: string;
   endHash: string;
   size: number;
+}
+export interface UpdateOutsideDownloadFormData {
+  outsideDownload: 0 | 1;
 }
 
 // 修改文件名
@@ -63,7 +67,14 @@ export function fileRecordDetailByPropApi(
 export function checkFileApi(id: number): Promise<CheckFileRo> {
   return axios.patch(`/file/record/check/${id}`);
 }
-// 校验文件
+// 删除文件
 export function deleteFileApi(id: number): Promise<void> {
   return axios.delete(`/file/record/${id}`);
+}
+// 更新文件的外部下载启用状态
+export function updateOutsideDownloadApi(
+  id: number,
+  data: UpdateOutsideDownloadFormData,
+) {
+  return axios.patch(`/file/record/outside-download/${id}`, data);
 }
