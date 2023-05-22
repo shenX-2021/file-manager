@@ -16,9 +16,17 @@ export class ConfigService {
   }
 
   async init() {
-    const configEntity = await this.configEntityRepository.findOneBy({ id: 1 });
+    let configEntity = await this.configEntityRepository.findOneBy({ id: 1 });
     if (!configEntity) {
-      throw new Error('tb_config缺少数据');
+      configEntity = await this.configEntityRepository
+        .create({
+          id: 1,
+          downloadBandwidth: 0,
+          downloadBandwidthStatus: 0,
+          uploadBandwidthStatus: 0,
+          uploadBandwidth: 0,
+        })
+        .save();
     }
 
     this.configEntity = configEntity;
@@ -33,7 +41,7 @@ export class ConfigService {
       : 0;
   }
 
-  getAll(): ConfigEntity {
+  data(): ConfigEntity {
     return this.configEntity;
   }
 

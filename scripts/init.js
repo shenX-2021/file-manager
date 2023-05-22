@@ -53,14 +53,6 @@ async function handleDB() {
   const db = new Database(dbPath);
   await db.init();
 
-  // 添加配置
-  await db.run(
-    `INSERT INTO 
-          tb_config(id, upload_bandwidth_status, upload_bandwidth, download_bandwidth_status, download_bandwidth)
-         VALUES(?, ?, ?, ?, ?)`,
-    [1, 0, 0, 0, 0],
-  );
-
   printSuccess('sqlite初始化处理成功！');
 }
 

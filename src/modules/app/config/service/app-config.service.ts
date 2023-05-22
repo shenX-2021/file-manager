@@ -5,6 +5,8 @@ import { Repository } from 'typeorm';
 import { SetDto } from '@src/modules/app/config/dtos';
 import { isDefined } from 'class-validator';
 import { ConfigService } from '@src/modules/shared/services/config/config.service';
+import { ConfigRo } from '@src/modules/app/config/ros';
+import { QueryDeepPartialEntity } from 'typeorm/query-builder/QueryPartialEntity';
 
 @Injectable()
 export class AppConfigService {
@@ -17,31 +19,28 @@ export class AppConfigService {
   /**
    * 获取配置信息
    */
-  async config(): Promise<ConfigEntity> {
-    const configEntity = await this.configEntity.findOne({
-      where: {
-        id: 1,
-      },
-      select: {
-        id: true,
-        downloadBandwidth: true,
-        downloadBandwidthStatus: true,
-        uploadBandwidthStatus: true,
-        uploadBandwidth: true,
-      },
-    });
+  async config(): Promise<ConfigRo> {
+    let configEntity = this.configService.data();
 
     if (!configEntity) {
-      throw new InternalServerErrorException('配置文件不存在');
+      await this.configService.init();
+
+      configEntity = this.configService.data();
     }
 
-    return configEntity;
+    return {
+      id: configEntity.id,
+      uploadBandwidth: configEntity.uploadBandwidth,
+      uploadBandwidthStatus: configEntity.uploadBandwidthStatus,
+      downloadBandwidthStatus: configEntity.downloadBandwidthStatus,
+      downloadBandwidth: configEntity.downloadBandwidth,
+    };
   }
 
   /**
    * 更新配置
    */
-  async set(setDto: SetDto) {
+  async set(setDto: SetDto): Promise<void> {
     const {
       uploadBandwidth,
       uploadBandwidthStatus,
@@ -49,37 +48,27 @@ export class AppConfigService {
       downloadBandwidth,
     } = setDto;
 
-    const configEntity = await this.configEntity.findOne({
-      where: {
-        id: 1,
-      },
-      select: {
-        id: true,
-        downloadBandwidth: true,
-        downloadBandwidthStatus: true,
-        uploadBandwidthStatus: true,
-        uploadBandwidth: true,
-      },
-    });
+    const configEntity = this.configService.data();
 
     if (!configEntity) {
       throw new InternalServerErrorException('配置文件不存在');
     }
 
+    const data: QueryDeepPartialEntity<ConfigEntity> = {};
+
     if (isDefined(uploadBandwidth)) {
-      configEntity.uploadBandwidth = uploadBandwidth;
+      data.uploadBandwidth = uploadBandwidth;
     }
     if (isDefined(uploadBandwidthStatus)) {
-      configEntity.uploadBandwidthStatus = uploadBandwidthStatus;
+      data.uploadBandwidthStatus = uploadBandwidthStatus;
     }
     if (isDefined(downloadBandwidthStatus)) {
-      configEntity.downloadBandwidthStatus = downloadBandwidthStatus;
+      data.downloadBandwidthStatus = downloadBandwidthStatus;
     }
     if (isDefined(downloadBandwidth)) {
-      configEntity.downloadBandwidth = downloadBandwidth;
+      data.downloadBandwidth = downloadBandwidth;
     }
 
-    await configEntity.save();
-    await this.configService.init();
+    await this.configService.update(data);
   }
 }
