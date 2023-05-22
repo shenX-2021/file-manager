@@ -5,6 +5,7 @@ import { UserEntity } from '@src/entities';
 import { Repository } from 'typeorm';
 import { sha256 } from '@src/utils';
 import { Response } from 'express';
+import { nanoid } from 'nanoid';
 
 @Injectable()
 export class LoginService {
@@ -20,18 +21,30 @@ export class LoginService {
    */
   async login(loginDto: LoginDto, res: Response) {
     const { account, pwd } = loginDto;
-    const userEntity = await this.userEntityRepository.findOneBy({ account });
-    if (!userEntity) {
-      throw new BadRequestException('账号密码错误');
-    }
+    let userEntity = await this.userEntityRepository.findOneBy({ id: 1 });
 
-    const secretPwd = sha256(`${pwd}${userEntity.salt}`);
-    if (secretPwd !== userEntity.pwd) {
-      throw new BadRequestException('账号或密码错误');
+    if (!userEntity) {
+      const salt = nanoid(10);
+      const secretPwd = sha256(`${pwd}${salt}`);
+      userEntity = await this.userEntityRepository
+        .create({
+          id: 1,
+          account,
+          pwd: secretPwd,
+          salt,
+        })
+        .save();
+    } else {
+      const secretPwd = sha256(`${pwd}${userEntity.salt}`);
+      if (account !== userEntity.account) {
+        throw new BadRequestException('账号密码错误');
+      }
+      if (secretPwd !== userEntity.pwd) {
+        throw new BadRequestException('账号或密码错误');
+      }
     }
 
     LoginService.userEntity = userEntity;
-
     this.setCookie(res, userEntity.account);
   }
 

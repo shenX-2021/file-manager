@@ -4,8 +4,6 @@ services:
     container_name: file-manager
     restart: always
     environment:
-      - USER_ACCOUNT=test
-      - USER_PWD=test123
       - COOKIE_SECRET=FILE_MANAGER
     ports:
       - 8888:8888

@@ -30,6 +30,11 @@
         </el-form-item>
       </el-form>
 
+      <el-row>
+        <el-text type="warning">
+          此系统仅支持单个账号，首次登录即为注册！
+        </el-text>
+      </el-row>
       <el-button
         class="mt30"
         type="primary"

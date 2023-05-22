@@ -18,12 +18,6 @@ async function boostrap() {
   if (!process.env.DATABASE_DIR) {
     printError('缺少环境变量 DATABASE_DIR ，请在 .env 文件中填写');
   }
-  if (!process.env.USER_ACCOUNT) {
-    printError('缺少环境变量 USER_ACCOUNT ，请在 .env 文件中填写');
-  }
-  if (!process.env.USER_PWD) {
-    printError('缺少环境变量 USER_PWD ，请在 .env 文件中填写');
-  }
 
   try {
     await fse.access('./init.lock');
@@ -48,8 +42,6 @@ boostrap();
 async function handleDB() {
   print('sqlite初始化处理...');
   const DATABASE_DIR = process.env.DATABASE_DIR;
-  const USER_ACCOUNT = process.env.USER_ACCOUNT;
-  const USER_PWD = process.env.USER_PWD;
 
   await fse.ensureDir(DATABASE_DIR);
   const dbPath = path.join(DATABASE_DIR, 'file.db');
@@ -60,14 +52,6 @@ async function handleDB() {
 
   const db = new Database(dbPath);
   await db.init();
-
-  // 添加账号
-  const salt = crypto.randomUUID().slice(0, 8);
-  await db.run(
-    `INSERT INTO tb_user(id, account, pwd, salt) 
-      VALUES(?, ?, ?, ?)`,
-    [1, USER_ACCOUNT, _sha256(_sha256(USER_PWD) + salt), salt],
-  );
 
   // 添加配置
   await db.run(
