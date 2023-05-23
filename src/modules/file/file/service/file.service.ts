@@ -430,9 +430,7 @@ export class FileService {
       throw new NotFoundException('文件不存在');
     }
 
-    const file = fse.createReadStream(fileEntity.filePath);
-
-    return new StreamableFile(file);
+    return this.getStreamableFile(fileEntity.filePath);
   }
 
   /**
@@ -457,9 +455,7 @@ export class FileService {
       throw new NotFoundException('文件不存在!!!!');
     }
 
-    const file = fse.createReadStream(fileEntity.filePath);
-
-    return new StreamableFile(file);
+    return this.getStreamableFile(fileEntity.filePath);
   }
 
   /**
@@ -481,6 +477,36 @@ export class FileService {
    */
   private getChunkCount(size: number) {
     return Math.ceil(size / FileService.CHUNK_MAX_SIZE);
+  }
+
+  /**
+   * 获取待下载文件的可读流
+   */
+  private getStreamableFile(filePath: string) {
+    const downloadBandwidth = this.configService.downloadBandwidth;
+
+    let file: fse.ReadStream;
+
+    if (downloadBandwidth > 0) {
+      const onceReadSize = Math.ceil(downloadBandwidth / 10);
+      const duration = 100;
+
+      file = fse.createReadStream(filePath, {
+        highWaterMark: onceReadSize,
+      });
+
+      file.on('readable', async function () {
+        if (!file.readableEnded) {
+          setTimeout(() => {
+            this.read();
+          }, duration);
+        }
+      });
+    } else {
+      file = fse.createReadStream(filePath);
+    }
+
+    return new StreamableFile(file);
   }
 
   /**

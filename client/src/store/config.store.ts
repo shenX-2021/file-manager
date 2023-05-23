@@ -38,6 +38,12 @@ export const useConfigStore = defineStore('config', () => {
   function updateUploadBandwidth(bandwidth: number) {
     return updateConfig('uploadBandwidth', bandwidth);
   }
+  function updateDownloadBandwidthStatus(status: 0 | 1) {
+    return updateConfig('downloadBandwidthStatus', status);
+  }
+  function updateDownloadBandwidth(bandwidth: number) {
+    return updateConfig('downloadBandwidth', bandwidth);
+  }
 
   async function updateConfig(
     key:
@@ -78,6 +84,8 @@ export const useConfigStore = defineStore('config', () => {
     uploadBandwidth,
     updateUploadBandwidth,
     updateUploadBandwidthStatus,
+    updateDownloadBandwidth,
+    updateDownloadBandwidthStatus,
   };
 });
 

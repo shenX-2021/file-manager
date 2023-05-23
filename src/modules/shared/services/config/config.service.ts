@@ -41,6 +41,15 @@ export class ConfigService {
       : 0;
   }
 
+  /**
+   * 获取下载的带宽，未限制时返回0；
+   */
+  get downloadBandwidth(): number {
+    return this.configEntity?.downloadBandwidthStatus === 1
+      ? this.configEntity.downloadBandwidth
+      : 0;
+  }
+
   data(): ConfigEntity {
     return this.configEntity;
   }

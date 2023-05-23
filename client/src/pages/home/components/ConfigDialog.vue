@@ -37,6 +37,33 @@
             <span class="unit ml4">kb/s</span>
           </div>
         </div>
+        <div>
+          <div class="fw500">下载带宽：</div>
+          <div class="gap-1 w100per"></div>
+          <div class="flexCenter">
+            <el-switch
+              class="mr10"
+              :active-value="1"
+              active-text="启用"
+              :inactive-value="0"
+              inactive-text="禁用"
+              inline-prompt
+              :model-value="configStore.state.downloadBandwidthStatus ?? 0"
+              @change="configStore.updateDownloadBandwidthStatus"
+            />
+            <el-input-number
+              class="upload-bandwidth-input"
+              :model-value="state.downloadBandwidth"
+              :precision="0"
+              :min="0"
+              :step="1024"
+              :controls="true"
+              :disabled="configStore.state.uploadBandwidthStatus === 0"
+              @input="updateDownloadBandwidth"
+            />
+            <span class="unit ml4">kb/s</span>
+          </div>
+        </div>
       </div>
     </el-dialog>
   </div>
@@ -51,6 +78,7 @@ const configStore = useConfigStore();
 
 const state = reactive({
   uploadBandwidth: 0,
+  downloadBandwidth: 0,
 });
 
 const props = defineProps<{
@@ -72,12 +100,21 @@ async function updateUploadBandwidthHandler(bandwidth: number) {
 }
 const updateUploadBandwidth = debounce(updateUploadBandwidthHandler, 300);
 
+async function updateDownloadBandwidthHandler(bandwidth: number) {
+  await configStore.updateDownloadBandwidth(bandwidth * 1024);
+  state.downloadBandwidth = bandwidth;
+}
+const updateDownloadBandwidth = debounce(updateDownloadBandwidthHandler, 300);
+
 watch(
   () => configStore.state.configInit,
   (newVal) => {
     if (newVal) {
       state.uploadBandwidth = Math.floor(
         configStore.state.uploadBandwidth / 1024,
+      );
+      state.downloadBandwidth = Math.floor(
+        configStore.state.downloadBandwidth / 1024,
       );
     }
   },
