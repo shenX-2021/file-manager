@@ -1,0 +1,9 @@
+{
+  "name": "file-manger",
+  "scripts": {
+    "start:prod": "node dist/main"
+  },
+  "dependencies": {
+    "sqlite3": "^5.1.6"
+  }
+}

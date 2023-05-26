@@ -9,6 +9,7 @@ import { AppModule as AppCtrModule } from './modules/app/app.module';
 import { AccountModule } from '@src/modules/account/account.module';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
+import * as entities from './entities';
 
 @Module({
   imports: [
@@ -16,13 +17,13 @@ import { APP_GUARD } from '@nestjs/core';
     TypeOrmModule.forRoot({
       type: 'sqlite',
       database: path.join(DATABASE_DIR, 'file.db'),
-      entities: [__dirname + '/entities/*.entity{.ts,.js}'],
+      entities,
       extra: {
         fileMustExist: true,
       },
     }),
     ServeStaticModule.forRoot({
-      rootPath: path.join(__dirname, '..', 'client/dist/fm/web'),
+      rootPath: path.resolve(__dirname, '..', 'client/dist/fm/web'),
       serveRoot: '/fm/web',
       exclude: ['/fm/api/*'],
       serveStaticOptions: {

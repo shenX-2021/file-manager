@@ -37,7 +37,6 @@ lerna-debug.log*
 target/
 
 .env
-init.lock
 
 # client
 client/components.d.ts

@@ -1,6 +1,6 @@
 services:
   file-manager:
-    image: file-manager:latest
+    image: shenx2021/file-manager:0.0.1
     container_name: file-manager
     restart: always
     environment:

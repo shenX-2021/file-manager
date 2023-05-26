@@ -19,16 +19,8 @@ async function boostrap() {
     printError('缺少环境变量 DATABASE_DIR ，请在 .env 文件中填写');
   }
 
-  try {
-    await fse.access('./init.lock');
-    printSuccess('已经初始化过了，无需重复初始化');
-    return;
-  } catch (e) {}
-
   // 初始化数据库
   await handleDB();
-
-  execSync('touch init.lock');
 
   console.log('...\n');
   printSuccess('初始化完成，可执行 `npm run build` 构建代码！');
@@ -45,13 +37,15 @@ async function handleDB() {
 
   await fse.ensureDir(DATABASE_DIR);
   const dbPath = path.join(DATABASE_DIR, 'file.db');
-  try {
-    await fse.access(dbPath);
-    await fse.rm(dbPath);
-  } catch (e) {}
 
-  const db = new Database(dbPath);
-  await db.init();
+  const isInit = await fse
+    .access(dbPath)
+    .then(() => true)
+    .catch(() => false);
+  if (!isInit) {
+    const db = new Database(dbPath);
+    await db.init();
+  }
 
   printSuccess('sqlite初始化处理成功！');
 }

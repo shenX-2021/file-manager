@@ -11,8 +11,14 @@ COPY . /opt/app
 EXPOSE 8888
 
 RUN npm config set registry https://registry.npmmirror.com
-RUN npm ci
+RUN npm ci \
+  && npm run init \
+  && npm run build \
+  && rm -rf node_modules/ \
+  && rm -rf client/node_modules/ \
+  && rm -rf /root/.npm/_cacache
 
-RUN npm run build
+RUN cp -f docker-package.json package.json \
+  && npm i
 
-CMD ["/bin/sh", "-c", "npm run init && npm run start:prod"]
+CMD ["/bin/sh", "-c", "npm run start:prod"]

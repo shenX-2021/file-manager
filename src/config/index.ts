@@ -2,7 +2,7 @@ import * as path from 'path';
 import * as process from 'process';
 
 // 项目根目录
-export const PROJECT_DIR = path.join(__dirname, '../../');
+export const PROJECT_DIR = process.cwd();
 // 上传的文件存放目录
 export const UPLOAD_FILE_DIR = process.env.UPLOAD_FILE_DIR;
 
