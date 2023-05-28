@@ -54,7 +54,17 @@ export function download(id: number, filename: string) {
  * 复制
  */
 export async function copy(text: string) {
-  return navigator.clipboard.writeText(text);
+  if (navigator.clipboard?.writeText) {
+    return navigator.clipboard.writeText(text);
+  } else {
+    const textarea = document.createElement('textarea');
+    textarea.setAttribute('readonly', 'readonly');
+    textarea.value = text;
+    document.body.appendChild(textarea);
+    textarea.select();
+    document.execCommand('copy');
+    document.body.removeChild(textarea);
+  }
 }
 
 /**
