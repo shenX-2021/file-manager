@@ -8,7 +8,7 @@
   "scripts": {
     "init": "node scripts/init.js",
     "build": "npm run build:server && npm run build:client",
-    "build:server": "nest build",
+    "build:server": "nest build -c nest-cli-build.json",
     "build:client": "cd client && npm run build",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "nest start",
