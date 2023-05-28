@@ -58,7 +58,7 @@
               :min="0"
               :step="1024"
               :controls="true"
-              :disabled="configStore.state.uploadBandwidthStatus === 0"
+              :disabled="configStore.state.downloadBandwidthStatus === 0"
               @input="updateDownloadBandwidth"
             />
             <span class="unit ml4">kb/s</span>
