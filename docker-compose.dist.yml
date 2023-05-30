@@ -1,9 +1,12 @@
 services:
   file-manager:
-    image: shenx2021/file-manager:0.0.1
+    image: shenx2021/file-manager
     container_name: file-manager
     restart: always
     environment:
       - COOKIE_SECRET=FILE_MANAGER
+    volumes:
+      - /tmp/fm/db:/data/db
+      - /tmp/fm/files:/data/files
     ports:
       - 8888:8888

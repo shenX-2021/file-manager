@@ -37,6 +37,7 @@ lerna-debug.log*
 target/
 
 .env
+docker-compose.yml
 
 # client
 client/components.d.ts

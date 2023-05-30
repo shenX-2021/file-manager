@@ -49,14 +49,19 @@ npm run start:prod
 | COOKIE_SECRET      | 必选 | 
 
 #### 文件目录
-| 简介         | path             |
-|------------|------------------|
-| 上传文件的存放目录  | UPLOAD_FILE_DIR  | 
-| 上传文件的切片的存放目录 | UPLOAD_CHUNK_DIR | 
-| sqlite的数据文件存放目录 | DATABASE_DIR     | 
-| 日志文件       | LOG_PATH         | 
+| 简介         | path             | 默认值               |
+|------------|------------------|-------------------|
+| 上传文件的存放目录  | UPLOAD_FILE_DIR  | /data/files       |
+| 上传文件的切片的存放目录 | UPLOAD_CHUNK_DIR | /data/chunks      |
+| sqlite的数据文件存放目录 | DATABASE_DIR     | /data/db          |
+| 日志文件       | LOG_PATH         | /data/log/log.txt |
 
-### 启动
+### 1.复制配置信息，并更改
+```bash
+cp docker-compose.dist.yml docker-compose.yml
+```
+
+### 2.启动
 ```bash
 docker-compose up -d
 ```

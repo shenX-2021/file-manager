@@ -8,6 +8,7 @@ import { COOKIE_SECRET, UPLOAD_CHUNK_DIR, UPLOAD_FILE_DIR } from './config';
 import * as process from 'process';
 import { WsAdapter } from './adapters';
 import * as cookieParser from 'cookie-parser';
+import 'source-map-support/register';
 
 const port = 8888;
 

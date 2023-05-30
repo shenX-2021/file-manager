@@ -1,6 +1,6 @@
 FROM node:18-alpine
 
-ENV LOG_PATH=/log/log.txt
+ENV LOG_PATH=/data/log/log.txt
 ENV UPLOAD_CHUNK_DIR=/data/chunks
 ENV UPLOAD_FILE_DIR=/data/files
 ENV DATABASE_DIR=/data/db
@@ -21,4 +21,4 @@ RUN npm ci \
 RUN cp -f docker-package.json package.json \
   && npm i
 
-CMD ["/bin/sh", "-c", "npm run start:prod"]
+CMD ["/bin/sh", "-c", "npm run start:prod > $LOG_PATH 2>&1"]

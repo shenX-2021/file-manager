@@ -33,6 +33,7 @@ module.exports = {
     minimize: true,
   },
   externals: getExternals(),
+  devtool: 'source-map',
   // ts文件的处理
   module: {
     rules: [
