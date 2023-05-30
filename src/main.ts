@@ -13,7 +13,7 @@ import 'source-map-support/register';
 const port = 8888;
 
 async function bootstrap() {
-  // // 建立上传目录
+  // 建立上传目录
   await fse.ensureDir(UPLOAD_FILE_DIR);
   await fse.ensureDir(UPLOAD_CHUNK_DIR);
   const app = await NestFactory.create(AppModule);

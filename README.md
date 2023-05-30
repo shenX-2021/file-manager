@@ -55,17 +55,37 @@ npm run start:prod
 | 上传文件的切片的存放目录 | UPLOAD_CHUNK_DIR | /data/chunks      |
 | sqlite的数据文件存放目录 | DATABASE_DIR     | /data/db          |
 
-### 1.复制配置信息，并更改
+
+<details>
+  <summary style="font-size: 1.5em; font-weight: 700;">1.docker-compose启动</summary>
+
+#### 1.1.复制配置信息，并更改
 ```bash
 cp docker-compose.dist.yml docker-compose.yml
 ```
 
-### 2.启动
+#### 1.2.启动
 ```bash
 docker-compose up -d
 ```
+</details>
+
+
+<details>
+  <summary style="font-size: 1.5em; font-weight: 700;">2.docker命令启动</summary>
+
+```bash
+docker run -it --name file-manager \
+  -e COOKIE_SECRET=xxxxxx \
+  -v /tmp/db:/data/db -v /tmp/files:/data/files  \
+  -p 8888:8888 \
+  shenx2021/file-manager
+```
+</details>
+
 
 </details>
 
 ## TODO
--[ ] 邮件通知
+- [ ] 邮件通知
+- [ ] 修改密码
