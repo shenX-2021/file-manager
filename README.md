@@ -54,7 +54,6 @@ npm run start:prod
 | 上传文件的存放目录  | UPLOAD_FILE_DIR  | /data/files       |
 | 上传文件的切片的存放目录 | UPLOAD_CHUNK_DIR | /data/chunks      |
 | sqlite的数据文件存放目录 | DATABASE_DIR     | /data/db          |
-| 日志文件       | LOG_PATH         | /data/log/log.txt |
 
 ### 1.复制配置信息，并更改
 ```bash
