@@ -11,7 +11,6 @@ EXPOSE 8888
 
 RUN npm config set registry https://registry.npmmirror.com
 RUN npm ci \
-  && npm run init \
   && npm run build \
   && rm -rf node_modules/ \
   && rm -rf client/node_modules/ \

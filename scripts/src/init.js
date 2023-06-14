@@ -45,9 +45,10 @@ async function handleDB() {
   if (!isInit) {
     const db = new Database(dbPath);
     await db.init();
+    printSuccess('sqlite初始化处理成功！');
+  } else {
+    printSuccess('sqlite已经初始化，无需初始化！');
   }
-
-  printSuccess('sqlite初始化处理成功！');
 }
 
 /**

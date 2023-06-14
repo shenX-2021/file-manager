@@ -1,5 +1,7 @@
 import * as dotenv from 'dotenv';
 dotenv.config();
+import { execSync } from 'child_process';
+import * as path from 'path';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
@@ -13,6 +15,10 @@ import 'source-map-support/register';
 const port = 8888;
 
 async function bootstrap() {
+  const res = execSync(
+    `node ${path.join(process.cwd(), 'scripts/dist/init.js')}`,
+  );
+  console.log(res.toString());
   // 建立上传目录
   await fse.ensureDir(UPLOAD_FILE_DIR);
   await fse.ensureDir(UPLOAD_CHUNK_DIR);
