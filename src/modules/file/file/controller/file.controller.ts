@@ -62,7 +62,12 @@ export class FileController {
   /**
    * 下载文件
    */
-  @Throttle(10, 60)
+  @Throttle({
+    default: {
+      ttl: 60,
+      limit: 10,
+    },
+  })
   @Get('download/:id')
   download(@Param('id', ParseIntPipe) id: number) {
     return this.fileService.download(id);
@@ -72,7 +77,12 @@ export class FileController {
    * 外部下载文件（无需鉴权）
    */
   @SkipAuth()
-  @Throttle(10, 60)
+  @Throttle({
+    default: {
+      ttl: 60,
+      limit: 10,
+    },
+  })
   @Get('out/:filename')
   outsideDownload(@Param('filename') filename: string) {
     return this.fileService.outsideDownload(filename);

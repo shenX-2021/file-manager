@@ -31,10 +31,12 @@ import * as entities from './entities';
       },
     }),
     // 接口限流
-    ThrottlerModule.forRoot({
-      ttl: 2 * 60,
-      limit: 180,
-    }),
+    ThrottlerModule.forRoot([
+      {
+        ttl: 2 * 60,
+        limit: 180,
+      },
+    ]),
     SharedModule,
     AppCtrModule,
     AccountModule,

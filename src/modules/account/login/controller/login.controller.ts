@@ -12,7 +12,12 @@ export class LoginController {
   /**
    * 登录
    */
-  @Throttle(15, 60)
+  @Throttle({
+    default: {
+      ttl: 60,
+      limit: 15,
+    },
+  })
   @Post()
   login(@Body() loginDto: LoginDto, @Res({ passthrough: true }) res: Response) {
     return this.loginService.login(loginDto, res);
