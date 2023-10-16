@@ -3,6 +3,7 @@
     <div class="flexCenter mt10">
       <el-upload
         class="upload"
+        :multiple="true"
         drag
         :before-upload="handleFileChange"
         :disabled="uploadState.uploadDisabled"
