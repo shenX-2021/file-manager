@@ -86,6 +86,22 @@ docker run -it --name file-manager \
 
 </details>
 
+## 命令
+```bash
+# 编译
+npm run build
+# 启动服务
+npm start:prod
+# 初始化目录和数据库
+npm run init
+# 构建init脚本
+npm run build:init
+# 清除目录和数据库
+npm run reset
+# 构建reset脚本
+npm run build:reset
+```
+
 ## TODO
 - [ ] 邮件通知
 - [ ] 修改密码

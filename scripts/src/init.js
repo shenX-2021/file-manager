@@ -23,7 +23,7 @@ async function boostrap() {
   await handleDB();
 
   console.log('...\n');
-  printSuccess('初始化完成，可执行 `npm run build` 构建代码！');
+  printSuccess('初始化完成！');
 }
 
 boostrap();

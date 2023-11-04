@@ -15,6 +15,7 @@ import 'source-map-support/register';
 const port = 8888;
 
 async function bootstrap() {
+  // 初始化文件目录和数据库
   const res = execSync(
     `node ${path.join(process.cwd(), 'scripts/dist/init.js')}`,
   );
