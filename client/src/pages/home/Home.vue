@@ -34,8 +34,8 @@
         </div>
       </el-upload>
       <div class="ml10">
-        <div @click="isShowConfig = true">设置</div>
-        <div class="mt10" @click="logout">登出</div>
+        <div class="btn" @click="isShowConfig = true">设置</div>
+        <div class="btn mt10" @click="logout">登出</div>
       </div>
     </div>
     <upload-list v-show="uploadState.list.length > 0" class="mt10" />
@@ -132,5 +132,8 @@ onCreated();
     cursor: progress;
     user-select: none;
   }
+}
+.btn {
+  cursor: pointer;
 }
 </style>

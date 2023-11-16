@@ -35,6 +35,8 @@ interface MergeData {
 export class FileService {
   // 切片最大值
   static CHUNK_MAX_SIZE = 30 * 1024 * 1024;
+  // 磁盘剩余空间冗余值
+  static DISK_REDUNDANT_SIZE = 20 * 1024 * 1024;
   // 文件合并数据映射
   static MERGE_DATA_MAP: Record<number, MergeData> = {};
 
@@ -48,7 +50,6 @@ export class FileService {
    * 验证是否已经上传
    */
   async verify(verifyDto: VerifyDto): Promise<VerifyRo> {
-    // TODO: 查验磁盘空间
     const { filename, fileHash, size, startHash, endHash } = verifyDto;
     const filePath = this.getFilePath(fileHash);
 
@@ -118,6 +119,7 @@ export class FileService {
     // 检查目录下所有切片
     const chunkDir = this.getChunkDir(fileHash);
     let uploadedList: string[] = [];
+    let totalChunkSize: number = 0;
     if (await fse.exists(chunkDir)) {
       const chunkNames = await fse.readdir(chunkDir);
       for (const chunkName of chunkNames) {
@@ -139,6 +141,8 @@ export class FileService {
           // 大小和期望的大小不一致，移除切片
           if (chunkStat.size !== expectSize) {
             await fse.rm(chunkPath);
+          } else {
+            totalChunkSize += chunkStat.size;
           }
         } catch (e) {
           // do nothing
@@ -154,6 +158,20 @@ export class FileService {
     }
 
     if (fileEntity.status === FileStatusEnum.INIT) {
+      // 检查磁盘空间
+      const diskSpace = await checkDiskSpace(UPLOAD_FILE_DIR);
+      // 磁盘剩余空间 > 文件大小 + 后续上传的切片总大小 + 冗余空间
+      if (
+        diskSpace.free <
+        fileEntity.size -
+          totalChunkSize +
+          fileEntity.size +
+          FileService.DISK_REDUNDANT_SIZE
+      ) {
+        // 磁盘空间不够
+        throw new BadRequestException('磁盘空间不足，无法上传切片');
+      }
+
       fileEntity.status = FileStatusEnum.CHUNK_UPLOADING;
       await fileEntity.save();
     }
@@ -261,7 +279,7 @@ export class FileService {
     }
 
     // 所需磁盘空间，为合并成功，留100M冗余。
-    let needDiskSize = fileEntity.size + 100 * 1024 * 1024;
+    let needDiskSize = fileEntity.size + FileService.DISK_REDUNDANT_SIZE;
 
     // 校验文件
     try {
