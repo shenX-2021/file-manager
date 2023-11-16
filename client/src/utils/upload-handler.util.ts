@@ -6,7 +6,7 @@ export interface UploadedEventData {
   index: number;
   size: number;
 }
-const protocol = import.meta.env.VITE_WS_PROTOCOL === 'wss' ? 'wss' : 'ws';
+const protocol = location.protocol.startsWith('https') ? 'wss' : 'ws';
 const URL = import.meta.env.DEV
   ? `${protocol}://localhost:8888/fm/ws`
   : `${protocol}://${window.location.host}/fm/ws`;
@@ -266,7 +266,8 @@ export class UploadWebsocket extends EventEmitter {
   }
 
   close() {
-    if (![WebSocket.CLOSING, WebSocket.CLOSED].includes(this.ws.readyState)) {
+    const closeStatusList: number[] = [WebSocket.CLOSING, WebSocket.CLOSED];
+    if (!closeStatusList.includes(this.ws.readyState)) {
       this.closing = true;
       this.ws.close();
     } else {
