@@ -14,7 +14,7 @@ docker login
 docker push shenx2021/file-manager:latest
 
 # tag不为空，则需要指定版本
-if test -n $TAG ;then
+if test ${#TAG} -ne 0 ;then
   # 打上指定tag
   docker tag shenx2021/file-manager:latest shenx2021/file-manager:$TAG
   # 上传docker hub
