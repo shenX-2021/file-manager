@@ -1,11 +1,16 @@
 # 文件管理
 一个功能齐全的web文件管理器
 
+技术栈：NestJS +SQLite + Vue + Element-Plus
+
 ## 特性
 * 断点续传（切片上传）
 * 秒传
 * 上传/下载限速
 * 简单的权限管理
+
+## 预览Demo
+https://fm-kv4b.onrender.com/fm/web/login?account=admin&pwd=admin123
 
 ## 启动
 
