@@ -51,15 +51,28 @@
 
 <script setup lang="ts">
 import { useLogin } from '@src/pages/login/composables/';
-import { useRouter } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 const { rules, loginState, login, formRef } = useLogin();
 
 const router = useRouter();
+const route = useRoute();
 
 async function loginHandle() {
   await login();
   await router.push('/');
 }
+
+function onCreated() {
+  // 自动填充账号密码
+  const { account, pwd } = route.query;
+  if (account) {
+    loginState.account = account.toString();
+  }
+  if (pwd) {
+    loginState.pwd = pwd.toString();
+  }
+}
+onCreated();
 </script>
 
 <style lang="scss" scoped>
